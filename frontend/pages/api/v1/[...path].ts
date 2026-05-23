@@ -7,7 +7,6 @@
  * request and reads the env var from the live container environment.
  */
 import type { NextApiRequest, NextApiResponse } from 'next'
-import type { IncomingMessage } from 'http'
 
 // Reads from the container env at request time — never baked in at build time.
 const API_BASE =
@@ -15,7 +14,6 @@ const API_BASE =
 
 export const config = {
   api: {
-    bodyParser: false,  // We stream the raw body through unchanged
     externalResolver: true,
   },
 }
@@ -37,21 +35,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const upstream = `${API_BASE}/api/v1/${path}${qs ? `?${qs}` : ''}`
 
   try {
+    const isReadMethod = req.method === 'GET' || req.method === 'HEAD'
+    const requestBody: string | undefined = isReadMethod
+      ? undefined
+      : JSON.stringify(req.body)
+
     const forwardHeaders: Record<string, string> = {}
-    if (req.headers['content-type']) {
-      forwardHeaders['content-type'] = req.headers['content-type']
+    if (!isReadMethod && requestBody !== undefined) {
+      forwardHeaders['content-type'] = 'application/json'
     }
     if (req.headers['authorization']) {
       forwardHeaders['authorization'] = req.headers['authorization'] as string
     }
 
-    const isReadMethod = req.method === 'GET' || req.method === 'HEAD'
-    const body = isReadMethod ? undefined : await readRawBody(req)
-
     const upstreamRes = await fetch(upstream, {
       method: req.method ?? 'GET',
       headers: forwardHeaders,
-      body,
+      body: requestBody,
     })
 
     res.status(upstreamRes.status)
@@ -70,15 +70,4 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       detail: message,
     })
   }
-}
-
-function readRawBody(req: IncomingMessage): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = []
-    req.on('data', (chunk: Buffer | string) =>
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)),
-    )
-    req.on('end', () => resolve(Buffer.concat(chunks)))
-    req.on('error', reject)
-  })
 }
