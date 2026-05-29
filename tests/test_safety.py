@@ -10,10 +10,7 @@ from agentwatch.core.loop_detector import LoopDetector
 from agentwatch.core.policy_dsl import PolicyAction, PolicyEngine, Rule
 from agentwatch.core.risk import score_event
 from agentwatch.core.safety import (
-    RiskPattern,
-    RiskScorer,
     SafetyEngine,
-    SafetyPolicy,
 )
 from agentwatch.core.schema import (
     AgentEvent,
@@ -111,17 +108,21 @@ def test_blast_radius_safe_read():
 
 
 def test_policy_dsl_blocks_bash_rm():
-    engine = PolicyEngine([
-        Rule(condition='tool == "bash" and command contains "rm"', action=PolicyAction.BLOCK),
-    ])
+    engine = PolicyEngine(
+        [
+            Rule(condition='tool == "bash" and command contains "rm"', action=PolicyAction.BLOCK),
+        ]
+    )
     decision = engine.evaluate(_tool_event("bash", "rm /tmp/foo"))
     assert decision.action == PolicyAction.BLOCK
 
 
 def test_policy_dsl_pause_on_low_confidence():
-    engine = PolicyEngine([
-        Rule(condition="confidence < 0.5", action=PolicyAction.PAUSE_AND_ALERT),
-    ])
+    engine = PolicyEngine(
+        [
+            Rule(condition="confidence < 0.5", action=PolicyAction.PAUSE_AND_ALERT),
+        ]
+    )
     ev = _tool_event("read", "x")
     from agentwatch.core.schema import ConfidenceData
 
@@ -250,9 +251,11 @@ async def test_safety_engine_blocks_on_low_confidence_via_dsl():
             )
 
     # DSL rule: block if confidence < 0.5
-    dsl = PolicyEngine([
-        Rule(condition="confidence < 0.5", action=PolicyAction.BLOCK),
-    ])
+    dsl = PolicyEngine(
+        [
+            Rule(condition="confidence < 0.5", action=PolicyAction.BLOCK),
+        ]
+    )
 
     engine = SafetyEngine(auditor=LowConfAuditor(), policy_engine=dsl)
     event = _tool_event("bash", "echo hello")

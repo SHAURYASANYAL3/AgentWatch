@@ -428,7 +428,9 @@ async def list_sessions(
 
 
 @app.post("/api/v1/sessions")
-async def create_session(session: AgentSession, _auth: None = Depends(_require_api_key)) -> dict[str, Any]:
+async def create_session(
+    session: AgentSession, _auth: None = Depends(_require_api_key)
+) -> dict[str, Any]:
     _collector.register_session(session)
     await _pg_write_session(session)
     return {"status": "registered", "session": session.model_dump(mode="json")}
@@ -458,7 +460,9 @@ async def get_events(
 
 
 @app.post("/api/v1/events")
-async def ingest_event(event: AgentEvent, _auth: None = Depends(_require_api_key)) -> dict[str, Any]:
+async def ingest_event(
+    event: AgentEvent, _auth: None = Depends(_require_api_key)
+) -> dict[str, Any]:
     await get_event_bus().publish(event)
     return {"status": "accepted", "event_id": event.event_id}
 
@@ -472,7 +476,9 @@ async def get_trace(session_id: str, _auth: None = Depends(_require_api_key)) ->
 
 
 @app.get("/api/v1/sessions/{session_id}/confidence", response_model=ConfidenceResponse)
-async def get_confidence(session_id: str, _auth: None = Depends(_require_api_key)) -> ConfidenceResponse:
+async def get_confidence(
+    session_id: str, _auth: None = Depends(_require_api_key)
+) -> ConfidenceResponse:
     events = _collector.get_events(session_id, limit=2000)
     if not events:
         raise HTTPException(status_code=404, detail=f"No events for session {session_id}")
@@ -490,7 +496,9 @@ async def get_confidence(session_id: str, _auth: None = Depends(_require_api_key
 
 
 @app.get("/api/v1/sessions/{session_id}/reasoning")
-async def get_reasoning_audit(session_id: str, _auth: None = Depends(_require_api_key)) -> dict[str, Any]:
+async def get_reasoning_audit(
+    session_id: str, _auth: None = Depends(_require_api_key)
+) -> dict[str, Any]:
     events = _collector.get_events(session_id, limit=5000)
     if not events:
         raise HTTPException(status_code=404, detail=f"No events for session {session_id}")
@@ -498,7 +506,9 @@ async def get_reasoning_audit(session_id: str, _auth: None = Depends(_require_ap
 
 
 @app.get("/api/v1/sessions/{session_id}/cost")
-async def get_cost_budget(session_id: str, _auth: None = Depends(_require_api_key)) -> dict[str, Any]:
+async def get_cost_budget(
+    session_id: str, _auth: None = Depends(_require_api_key)
+) -> dict[str, Any]:
     budget = _cost_tracker.get_session(session_id)
     if not budget:
         events = _collector.get_events(session_id, limit=5000)
@@ -520,7 +530,9 @@ async def get_replay(session_id: str, _auth: None = Depends(_require_api_key)) -
 
 
 @app.get("/api/v1/sessions/{session_id}/checkpoints")
-async def list_checkpoints(session_id: str, _auth: None = Depends(_require_api_key)) -> dict[str, Any]:
+async def list_checkpoints(
+    session_id: str, _auth: None = Depends(_require_api_key)
+) -> dict[str, Any]:
     checkpoints = _rollback_engine.list_checkpoints(session_id)
     return {
         "session_id": session_id,
@@ -529,7 +541,9 @@ async def list_checkpoints(session_id: str, _auth: None = Depends(_require_api_k
 
 
 @app.post("/api/v1/sessions/{session_id}/rollback")
-async def rollback_session(session_id: str, request: RollbackRequest, _auth: None = Depends(_require_api_key)) -> dict[str, Any]:
+async def rollback_session(
+    session_id: str, request: RollbackRequest, _auth: None = Depends(_require_api_key)
+) -> dict[str, Any]:
     if request.checkpoint_id:
         result = await _rollback_engine.rollback(
             request.checkpoint_id,
@@ -573,7 +587,9 @@ async def get_safety_policy(_auth: None = Depends(_require_api_key)) -> dict[str
 
 
 @app.put("/api/v1/safety/policy")
-async def update_safety_policy(update: SafetyPolicyUpdate, _auth: None = Depends(_require_api_key)) -> dict[str, Any]:
+async def update_safety_policy(
+    update: SafetyPolicyUpdate, _auth: None = Depends(_require_api_key)
+) -> dict[str, Any]:
     policy = SafetyPolicy(
         policy_id="api-configured",
         name="API-configured policy",

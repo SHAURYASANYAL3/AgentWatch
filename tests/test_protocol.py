@@ -125,7 +125,10 @@ def test_anonymized_benchmark_requires_k_anonymity():
     b.submit("c1", "tool_error", "rm -rf failed")
     b.submit("c2", "tool_error", "rm -rf failed")
     rep = b.report()
-    assert all(p.fingerprint != b._patterns[next(iter(b._patterns))].fingerprint for p in rep.patterns) or len(rep.patterns) == 0
+    assert (
+        all(p.fingerprint != b._patterns[next(iter(b._patterns))].fingerprint for p in rep.patterns)
+        or len(rep.patterns) == 0
+    )
 
 
 def test_anonymized_benchmark_aggregates_with_enough_contributors():

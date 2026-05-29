@@ -71,7 +71,11 @@ def scan_text(text: str) -> InjectionScan:
     normalized = _normalize(text)
     for pat, name in _INJECTION_PATTERNS:
         if pat.search(normalized):
-            severity = "high" if name in ("explicit_override", "fake_system_block", "bidi_control_chars") else "medium"
+            severity = (
+                "high"
+                if name in ("explicit_override", "fake_system_block", "bidi_control_chars")
+                else "medium"
+            )
             findings.append(InjectionFinding(pattern=name, severity=severity))
     return InjectionScan(findings)
 

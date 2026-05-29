@@ -6,12 +6,10 @@ for PostgreSQL persistence.
 
 from __future__ import annotations
 
-import json
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import (
-    JSON,
     Boolean,
     Column,
     DateTime,
@@ -21,10 +19,9 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
-    create_engine,
     text,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, relationship
 
@@ -37,6 +34,7 @@ class Base(DeclarativeBase):
 # ORM Models
 # ─────────────────────────────────────────────
 
+
 class SessionRecord(Base):
     __tablename__ = "agent_sessions"
 
@@ -46,7 +44,7 @@ class SessionRecord(Base):
     framework = Column(String(64), nullable=False, index=True)
     status = Column(String(32), nullable=False, default="running", index=True)
     goal = Column(Text)
-    started_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    started_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
     ended_at = Column(DateTime(timezone=True))
     total_events = Column(Integer, default=0)
     total_tokens = Column(Integer, default=0)
@@ -67,7 +65,9 @@ class EventRecord(Base):
     __tablename__ = "agent_events"
 
     event_id = Column(String(36), primary_key=True)
-    session_id = Column(String(36), ForeignKey("agent_sessions.session_id", ondelete="CASCADE"), index=True)
+    session_id = Column(
+        String(36), ForeignKey("agent_sessions.session_id", ondelete="CASCADE"), index=True
+    )
     agent_id = Column(String(128), nullable=False)
     framework = Column(String(64), nullable=False)
     event_type = Column(String(64), nullable=False, index=True)
@@ -123,10 +123,12 @@ class CheckpointRecord(Base):
     __tablename__ = "checkpoints"
 
     checkpoint_id = Column(String(36), primary_key=True)
-    session_id = Column(String(36), ForeignKey("agent_sessions.session_id", ondelete="CASCADE"), index=True)
+    session_id = Column(
+        String(36), ForeignKey("agent_sessions.session_id", ondelete="CASCADE"), index=True
+    )
     step_number = Column(Integer, nullable=False)
     checkpoint_type = Column(String(32), nullable=False)
-    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
     snapshot_path = Column(String(512))
     git_commit_ref = Column(String(40))
     git_stash_ref = Column(String(40))
@@ -145,7 +147,9 @@ class MemoryEntryRecord(Base):
     content = Column(Text, nullable=False)
     summary = Column(Text)
     importance = Column(String(16), default="medium")
-    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), index=True)
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC), index=True
+    )
     last_accessed = Column(DateTime(timezone=True))
     access_count = Column(Integer, default=0)
     session_id = Column(String(36), index=True)
@@ -177,7 +181,7 @@ class PluginRecord(Base):
     permissions = Column(JSONB, default=dict)
     execution_count = Column(Integer, default=0)
     error_count = Column(Integer, default=0)
-    registered_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    registered_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     plugin_metadata = Column(JSONB, default=dict)
 
 
@@ -191,7 +195,7 @@ class TaskRecord(Base):
     title = Column(String(512), nullable=False)
     description = Column(Text)
     status = Column(String(32), default="pending", index=True)
-    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
     started_at = Column(DateTime(timezone=True))
     completed_at = Column(DateTime(timezone=True))
     dependencies = Column(JSONB, default=list)
@@ -203,6 +207,7 @@ class TaskRecord(Base):
 # Repository
 # ─────────────────────────────────────────────
 
+
 class Repository:
     """
     Data access layer for AgentWatch storage.
@@ -212,38 +217,35 @@ class Repository:
     def __init__(self, session: AsyncSession):
         self._session = session
 
-    async def upsert_session(self, session_data: Dict[str, Any]) -> None:
+    async def upsert_session(self, session_data: dict[str, Any]) -> None:
         existing = await self._session.get(SessionRecord, session_data["session_id"])
         if existing:
             for k, v in session_data.items():
                 if hasattr(existing, k):
                     setattr(existing, k, v)
         else:
-            record = SessionRecord(**{
-                k: v for k, v in session_data.items()
-                if hasattr(SessionRecord, k)
-            })
+            record = SessionRecord(
+                **{k: v for k, v in session_data.items() if hasattr(SessionRecord, k)}
+            )
             self._session.add(record)
         await self._session.flush()
 
-    async def insert_event(self, event_data: Dict[str, Any]) -> None:
-        record = EventRecord(**{
-            k: v for k, v in event_data.items()
-            if hasattr(EventRecord, k)
-        })
+    async def insert_event(self, event_data: dict[str, Any]) -> None:
+        record = EventRecord(**{k: v for k, v in event_data.items() if hasattr(EventRecord, k)})
         self._session.add(record)
         await self._session.flush()
 
-    async def get_session(self, session_id: str) -> Optional[SessionRecord]:
+    async def get_session(self, session_id: str) -> SessionRecord | None:
         return await self._session.get(SessionRecord, session_id)
 
     async def get_events(
         self,
         session_id: str,
-        event_type: Optional[str] = None,
+        event_type: str | None = None,
         limit: int = 1000,
-    ) -> List[EventRecord]:
+    ) -> list[EventRecord]:
         from sqlalchemy import select
+
         q = select(EventRecord).where(EventRecord.session_id == session_id)
         if event_type:
             q = q.where(EventRecord.event_type == event_type)
@@ -254,10 +256,11 @@ class Repository:
     async def get_recent_sessions(
         self,
         limit: int = 50,
-        framework: Optional[str] = None,
-        status: Optional[str] = None,
-    ) -> List[SessionRecord]:
+        framework: str | None = None,
+        status: str | None = None,
+    ) -> list[SessionRecord]:
         from sqlalchemy import select
+
         q = select(SessionRecord).order_by(SessionRecord.started_at.desc())
         if framework:
             q = q.where(SessionRecord.framework == framework)
@@ -267,19 +270,19 @@ class Repository:
         result = await self._session.execute(q)
         return list(result.scalars())
 
-    async def insert_checkpoint(self, cp_data: Dict[str, Any]) -> None:
-        record = CheckpointRecord(**{
-            k: v for k, v in cp_data.items()
-            if hasattr(CheckpointRecord, k)
-        })
+    async def insert_checkpoint(self, cp_data: dict[str, Any]) -> None:
+        record = CheckpointRecord(
+            **{k: v for k, v in cp_data.items() if hasattr(CheckpointRecord, k)}
+        )
         self._session.add(record)
         await self._session.flush()
 
-    async def get_blocked_events(self, limit: int = 100) -> List[EventRecord]:
+    async def get_blocked_events(self, limit: int = 100) -> list[EventRecord]:
         from sqlalchemy import select
+
         q = (
             select(EventRecord)
-            .where(EventRecord.safety_blocked == True)
+            .where(EventRecord.safety_blocked)
             .order_by(EventRecord.timestamp.desc())
             .limit(limit)
         )
@@ -290,6 +293,7 @@ class Repository:
 # ─────────────────────────────────────────────
 # Database initialization
 # ─────────────────────────────────────────────
+
 
 async def init_db(database_url: str) -> async_sessionmaker:
     """Initialize database, create tables, return session factory."""
@@ -303,7 +307,8 @@ async def init_db(database_url: str) -> async_sessionmaker:
             try:
                 await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
                 # Add embedding column if not exists
-                await conn.execute(text("""
+                await conn.execute(
+                    text("""
                     DO $$
                     BEGIN
                         IF NOT EXISTS (
@@ -314,10 +319,12 @@ async def init_db(database_url: str) -> async_sessionmaker:
                             CREATE INDEX ON memory_entries USING ivfflat (embedding vector_cosine_ops);
                         END IF;
                     END $$;
-                """))
+                """)
+                )
             except Exception as exc:
                 # pgvector not installed — fall back to in-memory embeddings
                 import logging
+
                 logging.getLogger(__name__).warning(
                     "pgvector not available: %s. Memory retrieval uses in-process fallback.", exc
                 )
@@ -327,11 +334,11 @@ async def init_db(database_url: str) -> async_sessionmaker:
 
 
 def get_database_url(
-    host: Optional[str] = None,
-    port: Optional[int] = None,
-    database: Optional[str] = None,
-    user: Optional[str] = None,
-    password: Optional[str] = None,
+    host: str | None = None,
+    port: int | None = None,
+    database: str | None = None,
+    user: str | None = None,
+    password: str | None = None,
 ) -> str:
     """Build the asyncpg database URL from explicit arguments or environment variables.
 

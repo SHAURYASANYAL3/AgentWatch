@@ -10,8 +10,9 @@ import asyncio
 import inspect
 import logging
 from collections import defaultdict
-from datetime import datetime, timezone
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Set
+from collections.abc import Callable, Coroutine
+from datetime import UTC, datetime
+from typing import Any
 
 from agentwatch.core.schema import AgentEvent, EventType
 
@@ -28,10 +29,10 @@ class EventFilter:
 
     def __init__(
         self,
-        event_types: Optional[Set[EventType]] = None,
-        session_ids: Optional[Set[str]] = None,
-        agent_ids: Optional[Set[str]] = None,
-        frameworks: Optional[Set[str]] = None,
+        event_types: set[EventType] | None = None,
+        session_ids: set[str] | None = None,
+        agent_ids: set[str] | None = None,
+        frameworks: set[str] | None = None,
     ) -> None:
         """Build a filter from optional allow-lists.
 
@@ -73,7 +74,7 @@ class HandlerRegistration:
         self,
         handler_id: str,
         handler: AnyHandler,
-        event_filter: Optional[EventFilter] = None,
+        event_filter: EventFilter | None = None,
         is_async: bool = False,
     ) -> None:
         """Register handler metadata on the bus.
@@ -90,7 +91,7 @@ class HandlerRegistration:
         self.is_async = is_async
         self.call_count = 0
         self.error_count = 0
-        self.registered_at = datetime.now(timezone.utc)
+        self.registered_at = datetime.now(UTC)
 
 
 class EventBus:
@@ -109,19 +110,19 @@ class EventBus:
 
     def __init__(self) -> None:
         """Create an empty bus with in-memory event logging."""
-        self._handlers: Dict[str, HandlerRegistration] = {}
-        self._type_index: Dict[EventType, Set[str]] = defaultdict(set)
-        self._global_handlers: Set[str] = set()  # subscribed to all events
+        self._handlers: dict[str, HandlerRegistration] = {}
+        self._type_index: dict[EventType, set[str]] = defaultdict(set)
+        self._global_handlers: set[str] = set()  # subscribed to all events
         self._lock = asyncio.Lock()
-        self._event_log: List[AgentEvent] = []
+        self._event_log: list[AgentEvent] = []
         self._max_log_size = 10_000
-        self._stats: Dict[str, int] = defaultdict(int)
+        self._stats: dict[str, int] = defaultdict(int)
 
     def subscribe(
         self,
         *event_types: EventType,
-        handler_id: Optional[str] = None,
-        event_filter: Optional[EventFilter] = None,
+        handler_id: str | None = None,
+        event_filter: EventFilter | None = None,
     ) -> Callable[[AnyHandler], AnyHandler]:
         """Decorator to subscribe a handler to one or more event types.
 
@@ -160,8 +161,8 @@ class EventBus:
         self,
         fn: AnyHandler,
         *event_types: EventType,
-        handler_id: Optional[str] = None,
-        event_filter: Optional[EventFilter] = None,
+        handler_id: str | None = None,
+        event_filter: EventFilter | None = None,
     ) -> str:
         """Subscribe a callable without using the decorator syntax.
 
@@ -214,13 +215,13 @@ class EventBus:
         # Log to in-memory buffer
         self._event_log.append(event)
         if len(self._event_log) > self._max_log_size:
-            self._event_log = self._event_log[-self._max_log_size:]
+            self._event_log = self._event_log[-self._max_log_size :]
 
         self._stats["total_published"] += 1
         self._stats[f"type.{event.event_type.value}"] += 1
 
         # Gather relevant handler IDs
-        handler_ids: Set[str] = set()
+        handler_ids: set[str] = set()
         handler_ids.update(self._global_handlers)
         handler_ids.update(self._type_index.get(event.event_type, set()))
 
@@ -249,7 +250,9 @@ class EventBus:
                 await reg.handler(event)  # type: ignore
             else:
                 await asyncio.get_event_loop().run_in_executor(
-                    None, reg.handler, event  # type: ignore
+                    None,
+                    reg.handler,
+                    event,  # type: ignore
                 )
             reg.call_count += 1
         except Exception as exc:
@@ -306,9 +309,9 @@ class EventBus:
     def get_recent_events(
         self,
         limit: int = 100,
-        event_type: Optional[EventType] = None,
-        session_id: Optional[str] = None,
-    ) -> List[AgentEvent]:
+        event_type: EventType | None = None,
+        session_id: str | None = None,
+    ) -> list[AgentEvent]:
         """Return recent events from the in-memory log, newest first.
 
         Args:
@@ -326,7 +329,7 @@ class EventBus:
             events = [e for e in events if e.session_id == session_id]
         return events[:limit]
 
-    def stats(self) -> Dict[str, int]:
+    def stats(self) -> dict[str, int]:
         """Return publish counters keyed by metric name.
 
         Returns:
@@ -340,7 +343,7 @@ class EventBus:
 
 
 # Singleton bus instance
-_default_bus: Optional[EventBus] = None
+_default_bus: EventBus | None = None
 
 
 def get_event_bus() -> EventBus:

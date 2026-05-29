@@ -209,7 +209,9 @@ def test_visualization_payload_marks_corrupted():
         {"key": "a", "type": "episodic", "value": "x"},
         {"key": "b", "type": "semantic", "value": "y"},
     ]
-    health = HealthReport(total_memories=2, issues=[HealthIssue(key="b", kind="corrupt", detail="x")])
+    health = HealthReport(
+        total_memories=2, issues=[HealthIssue(key="b", kind="corrupt", detail="x")]
+    )
     payload = build_payload(memories, retrievals=[("a", "b")], health=health)
     by_id = {n.id: n for n in payload.nodes}
     assert by_id["b"].kind == "corrupted"

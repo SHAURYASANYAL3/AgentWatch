@@ -47,10 +47,14 @@ def _ev(
     _args = args or {}
     # Auto-promote command-like argument values to raw_command so the
     # ToolCallData validator doesn't raise (and so safety checks work correctly).
-    _CMD_KEYS = ("command", "cmd", "shell", "exec")
+    cmd_keys = ("command", "cmd", "shell", "exec")
     _raw_cmd = next(
-        (v for k in _CMD_KEYS if isinstance(_args.get(k), str) and _args[k].strip()
-         for v in [_args[k]]),
+        (
+            v
+            for k in cmd_keys
+            if isinstance(_args.get(k), str) and _args[k].strip()
+            for v in [_args[k]]
+        ),
         None,
     )
     return AgentEvent(
@@ -59,7 +63,9 @@ def _ev(
         event_type=event_type,
         status=status,
         step_number=step,
-        tool_call=ToolCallData(tool_name=tool, arguments=_args, raw_command=_raw_cmd) if tool else None,
+        tool_call=ToolCallData(tool_name=tool, arguments=_args, raw_command=_raw_cmd)
+        if tool
+        else None,
     )
 
 

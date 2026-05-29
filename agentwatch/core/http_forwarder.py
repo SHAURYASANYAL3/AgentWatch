@@ -37,9 +37,7 @@ class HttpEventForwarder:
                     headers={"Content-Type": "application/json"},
                 )
                 if resp.status_code >= 400:
-                    logger.debug(
-                        "Event forwarder: server returned HTTP %d", resp.status_code
-                    )
+                    logger.debug("Event forwarder: server returned HTTP %d", resp.status_code)
         except Exception as exc:
             logger.debug("Event forward to %s failed: %s", self.api_url, exc)
 

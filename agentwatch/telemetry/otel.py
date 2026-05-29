@@ -7,8 +7,9 @@ Exports spans to OTLP, Jaeger, or stdout.
 from __future__ import annotations
 
 import logging
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Any, Dict, Generator, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -16,15 +17,15 @@ logger = logging.getLogger(__name__)
 # OTel imports — graceful degradation if absent
 # ─────────────────────────────────────────────
 try:
-    from opentelemetry import trace, metrics
-    from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+    from opentelemetry import metrics, trace
     from opentelemetry.sdk.metrics import MeterProvider
     from opentelemetry.sdk.metrics.export import (
         ConsoleMetricExporter,
         PeriodicExportingMetricReader,
     )
     from opentelemetry.sdk.resources import Resource
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
     from opentelemetry.semconv.resource import ResourceAttributes
 
     _OTEL_AVAILABLE = True
@@ -38,10 +39,10 @@ class TelemetryConfig:
         self,
         service_name: str = "agentwatch",
         service_version: str = "0.2.0",
-        otlp_endpoint: Optional[str] = None,
+        otlp_endpoint: str | None = None,
         export_to_console: bool = False,
         enable_metrics: bool = True,
-        endpoint: Optional[str] = None,  # Compatibility alias
+        endpoint: str | None = None,  # Compatibility alias
     ):
         self.service_name = service_name
         self.service_version = service_version
@@ -60,7 +61,7 @@ class TelemetryProvider:
     Falls back gracefully when OTel SDK is not installed.
     """
 
-    def __init__(self, config: Optional[TelemetryConfig] = None):
+    def __init__(self, config: TelemetryConfig | None = None):
         self._config = config or TelemetryConfig()
         self._tracer = None
         self._meter = None
@@ -98,10 +99,12 @@ class TelemetryProvider:
             logger.info("OpenTelemetry not available — skipping telemetry init")
             return
 
-        resource = Resource.create({
-            ResourceAttributes.SERVICE_NAME: self._config.service_name,
-            ResourceAttributes.SERVICE_VERSION: self._config.service_version,
-        })
+        resource = Resource.create(
+            {
+                ResourceAttributes.SERVICE_NAME: self._config.service_name,
+                ResourceAttributes.SERVICE_VERSION: self._config.service_version,
+            }
+        )
 
         # ── Tracing setup ────────────────────────────────────────────────
         tracer_provider = TracerProvider(resource=resource)
@@ -109,6 +112,7 @@ class TelemetryProvider:
         if self._config.otlp_endpoint:
             try:
                 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+
                 otlp_exporter = OTLPSpanExporter(endpoint=self._config.otlp_endpoint)
                 tracer_provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
                 logger.info("OTLP span exporter configured: %s", self._config.otlp_endpoint)
@@ -116,9 +120,7 @@ class TelemetryProvider:
                 logger.warning("opentelemetry-exporter-otlp not installed")
 
         if self._config.export_to_console:
-            tracer_provider.add_span_processor(
-                BatchSpanProcessor(ConsoleSpanExporter())
-            )
+            tracer_provider.add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
 
         trace.set_tracer_provider(tracer_provider)
         self._tracer = trace.get_tracer(
@@ -134,6 +136,7 @@ class TelemetryProvider:
                     from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
                         OTLPMetricExporter,
                     )
+
                     metric_exporter = OTLPMetricExporter(endpoint=self._config.otlp_endpoint)
                     readers.append(PeriodicExportingMetricReader(metric_exporter))
                 except ImportError:
@@ -141,7 +144,9 @@ class TelemetryProvider:
 
             if self._config.export_to_console:
                 readers.append(
-                    PeriodicExportingMetricReader(ConsoleMetricExporter(), export_interval_millis=60000)
+                    PeriodicExportingMetricReader(
+                        ConsoleMetricExporter(), export_interval_millis=60000
+                    )
                 )
 
             meter_provider = MeterProvider(resource=resource, metric_readers=readers)
@@ -176,7 +181,7 @@ class TelemetryProvider:
     def span(
         self,
         name: str,
-        attributes: Optional[Dict[str, Any]] = None,
+        attributes: dict[str, Any] | None = None,
     ) -> Generator:
         """Context manager to create a trace span."""
         if not self._tracer:
@@ -212,7 +217,7 @@ class TelemetryProvider:
 OTELExporter = TelemetryProvider
 
 # Singleton
-_provider: Optional[TelemetryProvider] = None
+_provider: TelemetryProvider | None = None
 
 
 def get_telemetry() -> TelemetryProvider:

@@ -6,12 +6,11 @@ All agent events are normalized into this schema regardless of framework.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
-
 
 # ─────────────────────────────────────────────
 # Enumerations
@@ -117,20 +116,20 @@ class TokenUsage(BaseModel):
     prompt_tokens: int = 0
     completion_tokens: int = 0
     total_tokens: int = 0
-    estimated_cost_usd: Optional[float] = None
+    estimated_cost_usd: float | None = None
 
 
 class ToolCallData(BaseModel):
     """Payload for a tool invocation before execution."""
 
     tool_name: str
-    tool_id: Optional[str] = None
-    arguments: Dict[str, Any] = Field(default_factory=dict)
-    raw_command: Optional[str] = None
-    affected_resources: List[str] = Field(default_factory=list)
+    tool_id: str | None = None
+    arguments: dict[str, Any] = Field(default_factory=dict)
+    raw_command: str | None = None
+    affected_resources: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def _validate_command_fields(self) -> "ToolCallData":
+    def _validate_command_fields(self) -> ToolCallData:
         """Catch the silent-risk footgun: command-like argument key without raw_command.
 
         When a caller puts the shell command in ``arguments['command']`` but leaves
@@ -167,7 +166,7 @@ class ToolCallData(BaseModel):
         return self
 
     @classmethod
-    def from_dict(cls, tool_name: str, params_dict: Dict[str, Any]) -> "ToolCallData":
+    def from_dict(cls, tool_name: str, params_dict: dict[str, Any]) -> ToolCallData:
         """Convenience constructor that auto-maps common parameter names to raw_command.
 
         Searches ``params_dict`` for a command-like key (``command``, ``cmd``,
@@ -182,12 +181,12 @@ class ToolCallData(BaseModel):
             A :class:`ToolCallData` with ``raw_command`` set when a command key
             is found, or ``None`` when no recognizable command key is present.
         """
-        _PROMOTE_KEYS = ("command", "cmd", "shell", "exec", "bash", "script")
-        raw_command: Optional[str] = None
-        for key in _PROMOTE_KEYS:
+        promote_keys = ("command", "cmd", "shell", "exec", "bash", "script")
+        raw_command: str | None = None
+        for key in promote_keys:
             val = params_dict.get(key)
             if isinstance(val, str) and val.strip():
-                raw_command = val
+                raw_command = val.strip()
                 break
         return cls(
             tool_name=tool_name,
@@ -200,11 +199,11 @@ class ToolResultData(BaseModel):
     """Payload for a completed or failed tool execution."""
 
     tool_name: str
-    tool_id: Optional[str] = None
+    tool_id: str | None = None
     output: Any = None
-    error: Optional[str] = None
-    exit_code: Optional[int] = None
-    execution_time_ms: Optional[float] = None
+    error: str | None = None
+    exit_code: int | None = None
+    execution_time_ms: float | None = None
 
 
 class SafetyCheckData(BaseModel):
@@ -213,8 +212,8 @@ class SafetyCheckData(BaseModel):
     risk_level: RiskLevel
     risk_score: float = Field(ge=0.0, le=1.0)
     blocked: bool = False
-    reasons: List[str] = Field(default_factory=list)
-    matched_policies: List[str] = Field(default_factory=list)
+    reasons: list[str] = Field(default_factory=list)
+    matched_policies: list[str] = Field(default_factory=list)
     requires_approval: bool = False
     approval_timeout_seconds: int = 60
 
@@ -223,10 +222,10 @@ class MemoryData(BaseModel):
     """Memory read/write metadata (episodic, semantic, or procedural)."""
 
     memory_type: str  # episodic | semantic | procedural
-    key: Optional[str] = None
-    content: Optional[str] = None
-    embedding_model: Optional[str] = None
-    similarity_score: Optional[float] = None
+    key: str | None = None
+    content: str | None = None
+    embedding_model: str | None = None
+    similarity_score: float | None = None
     retrieved_count: int = 0
 
 
@@ -236,8 +235,8 @@ class ConfidenceData(BaseModel):
     overall_score: float = Field(ge=0.0, le=1.0)
     goal_alignment: float = Field(ge=0.0, le=1.0, default=1.0)
     consistency_score: float = Field(ge=0.0, le=1.0, default=1.0)
-    anomaly_flags: List[str] = Field(default_factory=list)
-    explanation: Optional[str] = None
+    anomaly_flags: list[str] = Field(default_factory=list)
+    explanation: str | None = None
 
 
 class AgentMessageData(BaseModel):
@@ -246,8 +245,8 @@ class AgentMessageData(BaseModel):
     sender_agent_id: str
     receiver_agent_id: str
     message_type: str  # task | result | query | broadcast
-    content: Dict[str, Any] = Field(default_factory=dict)
-    correlation_id: Optional[str] = None
+    content: dict[str, Any] = Field(default_factory=dict)
+    correlation_id: str | None = None
 
 
 class CheckpointData(BaseModel):
@@ -255,9 +254,9 @@ class CheckpointData(BaseModel):
 
     checkpoint_id: str
     snapshot_type: str  # filesystem | memory | git | container
-    snapshot_path: Optional[str] = None
-    git_ref: Optional[str] = None
-    size_bytes: Optional[int] = None
+    snapshot_path: str | None = None
+    git_ref: str | None = None
+    size_bytes: int | None = None
 
 
 # ─────────────────────────────────────────────
@@ -275,49 +274,49 @@ class AgentEvent(BaseModel):
     event_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     session_id: str
     agent_id: str
-    agent_name: Optional[str] = None
+    agent_name: str | None = None
     framework: AgentFramework = AgentFramework.CUSTOM
-    parent_event_id: Optional[str] = None
-    trace_id: Optional[str] = None  # OpenTelemetry trace ID
+    parent_event_id: str | None = None
+    trace_id: str | None = None  # OpenTelemetry trace ID
 
     # Classification
     event_type: EventType
     status: ExecutionStatus = ExecutionStatus.RUNNING
 
     # Timing
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    duration_ms: Optional[float] = None
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    duration_ms: float | None = None
 
     # Context
     step_number: int = 0
     iteration: int = 0
-    goal: Optional[str] = None
-    task_id: Optional[str] = None
-    parent_task_id: Optional[str] = None
+    goal: str | None = None
+    task_id: str | None = None
+    parent_task_id: str | None = None
 
     # Payload — one of these is populated per event type
-    tool_call: Optional[ToolCallData] = None
-    tool_result: Optional[ToolResultData] = None
-    safety: Optional[SafetyCheckData] = None
-    memory: Optional[MemoryData] = None
-    confidence: Optional[ConfidenceData] = None
-    agent_message: Optional[AgentMessageData] = None
-    checkpoint: Optional[CheckpointData] = None
+    tool_call: ToolCallData | None = None
+    tool_result: ToolResultData | None = None
+    safety: SafetyCheckData | None = None
+    memory: MemoryData | None = None
+    confidence: ConfidenceData | None = None
+    agent_message: AgentMessageData | None = None
+    checkpoint: CheckpointData | None = None
 
     # Prompt/planner data (non-hidden, observable artifacts only)
-    prompt_preview: Optional[str] = None  # first 500 chars of prompt
-    planner_output_preview: Optional[str] = None  # observable planner text
+    prompt_preview: str | None = None  # first 500 chars of prompt
+    planner_output_preview: str | None = None  # observable planner text
 
     # Token / cost
-    token_usage: Optional[TokenUsage] = None
+    token_usage: TokenUsage | None = None
 
     # Extensible metadata
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-    tags: List[str] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    tags: list[str] = Field(default_factory=list)
 
     # Environment snapshot
-    working_directory: Optional[str] = None
-    environment_vars_redacted: List[str] = Field(default_factory=list)
+    working_directory: str | None = None
+    environment_vars_redacted: list[str] = Field(default_factory=list)
 
     @field_validator("timestamp", mode="before")
     @classmethod
@@ -338,10 +337,10 @@ class AgentEvent(BaseModel):
             return v
 
         if parsed.tzinfo is None:
-            return parsed.replace(tzinfo=timezone.utc)
-        return parsed.astimezone(timezone.utc)
+            return parsed.replace(tzinfo=UTC)
+        return parsed.astimezone(UTC)
 
-    def model_dump_for_storage(self) -> Dict[str, Any]:
+    def model_dump_for_storage(self) -> dict[str, Any]:
         """Serialize the event for persistence with ISO-8601 timestamps.
 
         Returns:
@@ -372,17 +371,17 @@ class AgentSession(BaseModel):
 
     session_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     agent_id: str
-    agent_name: Optional[str] = None
+    agent_name: str | None = None
     framework: AgentFramework = AgentFramework.CUSTOM
-    started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    ended_at: Optional[datetime] = None
+    started_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    ended_at: datetime | None = None
     status: ExecutionStatus = ExecutionStatus.RUNNING
-    goal: Optional[str] = None
+    goal: str | None = None
     total_events: int = 0
     total_tokens: int = 0
     estimated_cost_usd: float = 0.0
-    final_confidence: Optional[float] = None
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    final_confidence: float | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 # ─────────────────────────────────────────────
@@ -395,17 +394,17 @@ class TaskNode(BaseModel):
 
     task_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     session_id: str
-    parent_task_id: Optional[str] = None
-    assigned_agent_id: Optional[str] = None
+    parent_task_id: str | None = None
+    assigned_agent_id: str | None = None
     title: str
-    description: Optional[str] = None
+    description: str | None = None
     status: ExecutionStatus = ExecutionStatus.PENDING
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-    dependencies: List[str] = Field(default_factory=list)
-    outputs: Dict[str, Any] = Field(default_factory=dict)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    dependencies: list[str] = Field(default_factory=list)
+    outputs: dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 # ─────────────────────────────────────────────
@@ -434,11 +433,11 @@ class PluginManifest(BaseModel):
     version: str
     author: str
     description: str
-    homepage: Optional[str] = None
+    homepage: str | None = None
     license: str = "MIT"
     permissions: PluginPermissions = Field(default_factory=PluginPermissions)
     trust_level: int = Field(ge=0, le=5, default=0)  # 0=untrusted, 5=core
-    signature: Optional[str] = None  # Ed25519 signature
-    checksum_sha256: Optional[str] = None
+    signature: str | None = None  # Ed25519 signature
+    checksum_sha256: str | None = None
     min_agentwatch_version: str = "0.1.0"
-    tags: List[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)

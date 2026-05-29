@@ -7,17 +7,13 @@ from __future__ import annotations
 
 import asyncio
 import json
-import sys
 from pathlib import Path
-from typing import Optional
 
 import typer
+from rich import box
 from rich.console import Console
 from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
-from rich.text import Text
-from rich import box
 
 app = typer.Typer(
     name="agentwatch",
@@ -31,6 +27,7 @@ console = Console()
 # ─────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────
+
 
 def _status_color(status: str) -> str:
     return {
@@ -67,41 +64,57 @@ def _load_session_file(path: Path):
 # watch command — wrap an agent run
 # ─────────────────────────────────────────────
 
+
 @app.command()
 def watch(
     prompt: str = typer.Argument(..., help="Prompt to run with Claude Code"),
     model: str = typer.Option("claude-opus-4-5", "--model", "-m"),
     max_turns: int = typer.Option(50, "--max-turns"),
-    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Save session to file"),
+    output: Path | None = typer.Option(None, "--output", "-o", help="Save session to file"),
     no_safety: bool = typer.Option(False, "--no-safety", help="Disable safety checks (dangerous)"),
-    policy: str = typer.Option("default", "--policy", help="Safety policy: default|strict|permissive"),
+    policy: str = typer.Option(
+        "default", "--policy", help="Safety policy: default|strict|permissive"
+    ),
 ) -> None:
     """[bold]Watch[/bold] a Claude Code execution with full observability and safety."""
 
     async def _run() -> None:
         from agentwatch.adapters.claude_code import ClaudeCodeAdapter
-        from agentwatch.core.safety import SafetyEngine, SafetyPolicy, DEFAULT_POLICY, cli_approval_handler
+        from agentwatch.core.safety import (
+            DEFAULT_POLICY,
+            SafetyEngine,
+            SafetyPolicy,
+            cli_approval_handler,
+        )
         from agentwatch.replay.engine import ReplayEngine
 
-        console.print(Panel(
-            f"[bold cyan]AgentWatch[/bold cyan] — watching Claude Code\n"
-            f"[dim]Prompt:[/dim] {prompt[:80]}{'...' if len(prompt) > 80 else ''}",
-            border_style="cyan",
-        ))
+        console.print(
+            Panel(
+                f"[bold cyan]AgentWatch[/bold cyan] — watching Claude Code\n"
+                f"[dim]Prompt:[/dim] {prompt[:80]}{'...' if len(prompt) > 80 else ''}",
+                border_style="cyan",
+            )
+        )
 
         # Configure safety
         if no_safety:
             console.print("[yellow]⚠️  Safety checks disabled![/yellow]")
-            safety = SafetyEngine(policy=SafetyPolicy(
-                policy_id="disabled", name="Disabled",
-                block_on_critical=False, block_on_high=False,
-            ))
+            safety = SafetyEngine(
+                policy=SafetyPolicy(
+                    policy_id="disabled",
+                    name="Disabled",
+                    block_on_critical=False,
+                    block_on_high=False,
+                )
+            )
         else:
             p = DEFAULT_POLICY
             if policy == "strict":
                 p = SafetyPolicy(
-                    policy_id="strict", name="Strict",
-                    block_on_high=True, block_on_critical=True,
+                    policy_id="strict",
+                    name="Strict",
+                    block_on_high=True,
+                    block_on_critical=True,
                     require_approval_on_medium=True,
                 )
             safety = SafetyEngine(policy=p)
@@ -111,7 +124,6 @@ def watch(
 
         # Subscribe to print events live
         from agentwatch.core.event_bus import get_event_bus
-        from agentwatch.core.schema import EventType
 
         bus = get_event_bus()
 
@@ -131,6 +143,7 @@ def watch(
         # Save to file if requested
         if output:
             from agentwatch.replay.engine import ReplayEngine
+
             re = ReplayEngine()
             rs = re.load_from_events(session, adapter.events)
             saved_path = re.save_to_file(rs, output)
@@ -143,20 +156,21 @@ def watch(
 # replay command
 # ─────────────────────────────────────────────
 
+
 @app.command()
 def replay(
     session_file: Path = typer.Argument(..., help="Path to session JSON file"),
     speed: str = typer.Option("instant", "--speed", "-s", help="instant|fast|normal|slow"),
     from_step: int = typer.Option(0, "--from", help="Start from step N"),
-    to_step: Optional[int] = typer.Option(None, "--to", help="End at step N"),
+    to_step: int | None = typer.Option(None, "--to", help="End at step N"),
     show_all: bool = typer.Option(False, "--all", help="Show all events including metadata"),
     failure_only: bool = typer.Option(False, "--failures", "-f", help="Show only failure points"),
 ) -> None:
     """[bold]Replay[/bold] a captured session step-by-step."""
 
     async def _run() -> None:
-        from agentwatch.replay.engine import ReplayEngine, ReplaySpeed, _failure_analysis_to_dict
-        from agentwatch.core.schema import AgentSession, AgentEvent
+        from agentwatch.core.schema import AgentEvent, AgentSession
+        from agentwatch.replay.engine import ReplayEngine, ReplaySpeed
 
         data = _load_session_file(session_file)
         session = AgentSession(**data["session"])
@@ -165,20 +179,26 @@ def replay(
         engine = ReplayEngine()
         rs = engine.load_from_events(session, events)
 
-        console.print(Panel(
-            f"[bold]Replaying Session[/bold]\n"
-            f"[dim]ID:[/dim]     {session.session_id}\n"
-            f"[dim]Agent:[/dim]  {session.agent_name or session.agent_id}\n"
-            f"[dim]Steps:[/dim]  {rs.total_steps}\n"
-            f"[dim]Status:[/dim] [{_status_color(session.status.value)}]{session.status.value}[/{_status_color(session.status.value)}]",
-            border_style="blue",
-        ))
+        console.print(
+            Panel(
+                f"[bold]Replaying Session[/bold]\n"
+                f"[dim]ID:[/dim]     {session.session_id}\n"
+                f"[dim]Agent:[/dim]  {session.agent_name or session.agent_id}\n"
+                f"[dim]Steps:[/dim]  {rs.total_steps}\n"
+                f"[dim]Status:[/dim] [{_status_color(session.status.value)}]{session.status.value}[/{_status_color(session.status.value)}]",
+                border_style="blue",
+            )
+        )
 
         # Failure analysis
         if rs.failure_analysis:
             fa = rs.failure_analysis
-            if fa.primary_cause.value != "unknown" or fa.anomaly_flags if hasattr(fa, 'anomaly_flags') else False:
-                console.print(f"\n[bold red]Failure Analysis:[/bold red]")
+            if (
+                fa.primary_cause.value != "unknown" or fa.anomaly_flags
+                if hasattr(fa, "anomaly_flags")
+                else False
+            ):
+                console.print("\n[bold red]Failure Analysis:[/bold red]")
                 console.print(f"  Cause: [yellow]{fa.primary_cause.value}[/yellow]")
                 console.print(f"  {fa.summary}")
                 if fa.recommendations:
@@ -196,7 +216,9 @@ def replay(
         }
         replay_speed = speed_map.get(speed, ReplaySpeed.INSTANT)
 
-        async for step in engine.replay_async(rs, speed=replay_speed, start_step=from_step, end_step=to_step):
+        async for step in engine.replay_async(
+            rs, speed=replay_speed, start_step=from_step, end_step=to_step
+        ):
             if failure_only and not step.is_failure_point:
                 continue
             _print_replay_step(step, show_all=show_all)
@@ -210,11 +232,12 @@ def replay(
 # sessions command
 # ─────────────────────────────────────────────
 
+
 @app.command()
 def sessions(
     api_url: str = typer.Option("http://localhost:8000", "--api"),
     limit: int = typer.Option(20, "--limit", "-n"),
-    framework: Optional[str] = typer.Option(None, "--framework"),
+    framework: str | None = typer.Option(None, "--framework"),
 ) -> None:
     """[bold]List[/bold] recent agent sessions from the AgentWatch API."""
 
@@ -247,14 +270,15 @@ def sessions(
 # confidence command
 # ─────────────────────────────────────────────
 
+
 @app.command()
 def confidence(
     session_file: Path = typer.Argument(..., help="Path to session JSON file"),
 ) -> None:
     """[bold]Score[/bold] execution confidence and detect anomalies for a session."""
 
+    from agentwatch.core.schema import AgentEvent, AgentSession
     from agentwatch.scoring.confidence import ConfidenceScorer
-    from agentwatch.core.schema import AgentSession, AgentEvent
 
     data = _load_session_file(session_file)
     session = AgentSession(**data["session"])
@@ -263,13 +287,20 @@ def confidence(
     scorer = ConfidenceScorer()
     result = scorer.score(events, goal=session.goal)
 
-    score_color = "green" if result.overall_score >= 0.7 else "yellow" if result.overall_score >= 0.4 else "red"
+    score_color = (
+        "green"
+        if result.overall_score >= 0.7
+        else "yellow"
+        if result.overall_score >= 0.4
+        else "red"
+    )
 
-    console.print(Panel(
-        f"[bold]Confidence Analysis[/bold]\n"
-        f"Session: {session.session_id[:16]}...",
-        border_style="blue",
-    ))
+    console.print(
+        Panel(
+            f"[bold]Confidence Analysis[/bold]\nSession: {session.session_id[:16]}...",
+            border_style="blue",
+        )
+    )
 
     table = Table(box=box.ROUNDED)
     table.add_column("Metric", style="bold")
@@ -283,7 +314,11 @@ def confidence(
             return "[yellow]◐ Fair[/yellow]"
         return "[red]○ Poor[/red]"
 
-    table.add_row("Overall", f"[{score_color}]{result.overall_score:.3f}[/{score_color}]", _rate(result.overall_score))
+    table.add_row(
+        "Overall",
+        f"[{score_color}]{result.overall_score:.3f}[/{score_color}]",
+        _rate(result.overall_score),
+    )
     table.add_row("Goal Alignment", f"{result.goal_alignment:.3f}", _rate(result.goal_alignment))
     table.add_row("Consistency", f"{result.consistency_score:.3f}", _rate(result.consistency_score))
 
@@ -310,6 +345,7 @@ def confidence(
 # safety command
 # ─────────────────────────────────────────────
 
+
 @app.command()
 def safety(
     command: str = typer.Argument(..., help="Command to risk-score"),
@@ -317,7 +353,7 @@ def safety(
 ) -> None:
     """[bold]Score[/bold] the risk level of a shell command."""
     from agentwatch.core.safety import RiskScorer
-    from agentwatch.core.schema import ToolCallData, RiskLevel
+    from agentwatch.core.schema import ToolCallData
 
     scorer = RiskScorer()
     tool = ToolCallData(tool_name="bash", raw_command=command, arguments={"command": command})
@@ -339,6 +375,7 @@ def safety(
 # serve command
 # ─────────────────────────────────────────────
 
+
 @app.command()
 def serve(
     host: str = typer.Option("0.0.0.0", "--host"),
@@ -352,12 +389,14 @@ def serve(
         console.print("[red]uvicorn not installed. Run: pip install uvicorn[/red]")
         raise typer.Exit(1)
 
-    console.print(Panel(
-        f"[bold cyan]AgentWatch API Server[/bold cyan]\n"
-        f"[dim]Listening on[/dim] http://{host}:{port}\n"
-        f"[dim]Dashboard[/dim]  http://localhost:3000",
-        border_style="cyan",
-    ))
+    console.print(
+        Panel(
+            f"[bold cyan]AgentWatch API Server[/bold cyan]\n"
+            f"[dim]Listening on[/dim] http://{host}:{port}\n"
+            f"[dim]Dashboard[/dim]  http://localhost:3000",
+            border_style="cyan",
+        )
+    )
     uvicorn.run(
         "agentwatch.api.server:app",
         host=host,
@@ -371,8 +410,9 @@ def serve(
 # Print helpers
 # ─────────────────────────────────────────────
 
+
 def _print_live_event(event) -> None:
-    from agentwatch.core.schema import EventType, RiskLevel
+    from agentwatch.core.schema import EventType
 
     icon_map = {
         EventType.TOOL_CALL: "🔧",
@@ -412,8 +452,12 @@ def _print_live_event(event) -> None:
             for r in event.safety.reasons[:2]:
                 console.print(f"         [red]→ {r}[/red]")
 
-    elif event.event_type in (EventType.SESSION_START, EventType.SESSION_END,
-                              EventType.AGENT_START, EventType.AGENT_END):
+    elif event.event_type in (
+        EventType.SESSION_START,
+        EventType.SESSION_END,
+        EventType.AGENT_START,
+        EventType.AGENT_END,
+    ):
         sc = _status_color(event.status.value)
         console.print(f"[dim]{ts}[/dim] {icon} [{sc}]{event.event_type.value}[/{sc}]")
 
@@ -437,7 +481,9 @@ def _print_replay_step(step, show_all: bool = False) -> None:
         info_lines.append(f"[red]Error: {event.tool_result.error[:100]}[/red]")
     if event.safety and event.safety.risk_level.value not in ("safe", "low"):
         rc = _risk_color(event.safety.risk_level.value)
-        info_lines.append(f"Risk: [{rc}]{event.safety.risk_level.value.upper()}[/{rc}] ({event.safety.risk_score:.2f})")
+        info_lines.append(
+            f"Risk: [{rc}]{event.safety.risk_level.value.upper()}[/{rc}] ({event.safety.risk_score:.2f})"
+        )
     if annotations:
         info_lines.append(f"[bold]{annotations}[/bold]")
 
@@ -451,19 +497,31 @@ def _print_session_summary(session, events) -> None:
     result = scorer.score(events, goal=session.goal)
 
     sc = _status_color(session.status.value)
-    cc = "green" if result.overall_score >= 0.7 else "yellow" if result.overall_score >= 0.4 else "red"
+    cc = (
+        "green"
+        if result.overall_score >= 0.7
+        else "yellow"
+        if result.overall_score >= 0.4
+        else "red"
+    )
 
-    console.print(Panel(
-        f"[bold]Session Complete[/bold]\n"
-        f"Status:     [{sc}]{session.status.value}[/{sc}]\n"
-        f"Events:     {session.total_events}\n"
-        f"Tokens:     {session.total_tokens:,}\n"
-        f"Cost (est): ${session.estimated_cost_usd:.4f}\n"
-        f"Confidence: [{cc}]{result.overall_score:.3f}[/{cc}]\n"
-        + (f"Anomalies:  {', '.join(result.anomaly_flags)}" if result.anomaly_flags else "Anomalies:  none"),
-        border_style=sc,
-        title="AgentWatch Summary",
-    ))
+    console.print(
+        Panel(
+            f"[bold]Session Complete[/bold]\n"
+            f"Status:     [{sc}]{session.status.value}[/{sc}]\n"
+            f"Events:     {session.total_events}\n"
+            f"Tokens:     {session.total_tokens:,}\n"
+            f"Cost (est): ${session.estimated_cost_usd:.4f}\n"
+            f"Confidence: [{cc}]{result.overall_score:.3f}[/{cc}]\n"
+            + (
+                f"Anomalies:  {', '.join(result.anomaly_flags)}"
+                if result.anomaly_flags
+                else "Anomalies:  none"
+            ),
+            border_style=sc,
+            title="AgentWatch Summary",
+        )
+    )
 
 
 def _print_sessions_table(sessions: list) -> None:
@@ -496,6 +554,7 @@ def _print_sessions_table(sessions: list) -> None:
 # ─────────────────────────────────────────────
 # Entrypoint
 # ─────────────────────────────────────────────
+
 
 def main() -> None:
     app()

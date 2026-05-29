@@ -37,6 +37,7 @@ from agentwatch.tracing.collector import TraceCollector
 # Fixtures
 # ─────────────────────────────────────────────
 
+
 @pytest.fixture
 def bus() -> EventBus:
     return EventBus()
@@ -71,6 +72,7 @@ def replay_engine() -> ReplayEngine:
 # Full event pipeline test
 # ─────────────────────────────────────────────
 
+
 class TestEventPipeline:
     @pytest.mark.asyncio
     async def test_events_flow_through_bus_to_collector(self, bus, collector):
@@ -82,18 +84,23 @@ class TestEventPipeline:
 
         events = [
             AgentEvent(
-                session_id=session_id, agent_id=agent_id,
+                session_id=session_id,
+                agent_id=agent_id,
                 framework=AgentFramework.CLAUDE_CODE,
                 event_type=EventType.SESSION_START,
             ),
             AgentEvent(
-                session_id=session_id, agent_id=agent_id,
+                session_id=session_id,
+                agent_id=agent_id,
                 framework=AgentFramework.CLAUDE_CODE,
                 event_type=EventType.TOOL_CALL,
-                tool_call=ToolCallData(tool_name="bash", raw_command="echo test", arguments={"command": "echo test"}),
+                tool_call=ToolCallData(
+                    tool_name="bash", raw_command="echo test", arguments={"command": "echo test"}
+                ),
             ),
             AgentEvent(
-                session_id=session_id, agent_id=agent_id,
+                session_id=session_id,
+                agent_id=agent_id,
                 framework=AgentFramework.CLAUDE_CODE,
                 event_type=EventType.SESSION_END,
                 status=ExecutionStatus.SUCCESS,
@@ -118,7 +125,8 @@ class TestEventPipeline:
 
         session_id = str(uuid.uuid4())
         dangerous = AgentEvent(
-            session_id=session_id, agent_id="agent",
+            session_id=session_id,
+            agent_id="agent",
             framework=AgentFramework.CLAUDE_CODE,
             event_type=EventType.TOOL_CALL,
             tool_call=ToolCallData(
@@ -149,29 +157,48 @@ class TestEventPipeline:
 
         session_id = str(uuid.uuid4())
         session = AgentSession(
-            session_id=session_id, agent_id="agent",
+            session_id=session_id,
+            agent_id="agent",
             framework=AgentFramework.CLAUDE_CODE,
             goal="Test the full pipeline",
         )
         collector.register_session(session)
 
         events_to_publish = [
-            AgentEvent(session_id=session_id, agent_id="agent",
-                       framework=AgentFramework.CLAUDE_CODE,
-                       event_type=EventType.SESSION_START, goal="Test"),
-            AgentEvent(session_id=session_id, agent_id="agent",
-                       framework=AgentFramework.CLAUDE_CODE,
-                       event_type=EventType.TOOL_CALL, step_number=1,
-                       tool_call=ToolCallData(tool_name="bash", raw_command="ls", arguments={"command": "ls"})),
-            AgentEvent(session_id=session_id, agent_id="agent",
-                       framework=AgentFramework.CLAUDE_CODE,
-                       event_type=EventType.TOOL_RESULT, step_number=2,
-                       status=ExecutionStatus.SUCCESS,
-                       tool_result=ToolResultData(tool_name="bash", output="file1.txt")),
-            AgentEvent(session_id=session_id, agent_id="agent",
-                       framework=AgentFramework.CLAUDE_CODE,
-                       event_type=EventType.SESSION_END, step_number=3,
-                       status=ExecutionStatus.SUCCESS),
+            AgentEvent(
+                session_id=session_id,
+                agent_id="agent",
+                framework=AgentFramework.CLAUDE_CODE,
+                event_type=EventType.SESSION_START,
+                goal="Test",
+            ),
+            AgentEvent(
+                session_id=session_id,
+                agent_id="agent",
+                framework=AgentFramework.CLAUDE_CODE,
+                event_type=EventType.TOOL_CALL,
+                step_number=1,
+                tool_call=ToolCallData(
+                    tool_name="bash", raw_command="ls", arguments={"command": "ls"}
+                ),
+            ),
+            AgentEvent(
+                session_id=session_id,
+                agent_id="agent",
+                framework=AgentFramework.CLAUDE_CODE,
+                event_type=EventType.TOOL_RESULT,
+                step_number=2,
+                status=ExecutionStatus.SUCCESS,
+                tool_result=ToolResultData(tool_name="bash", output="file1.txt"),
+            ),
+            AgentEvent(
+                session_id=session_id,
+                agent_id="agent",
+                framework=AgentFramework.CLAUDE_CODE,
+                event_type=EventType.SESSION_END,
+                step_number=3,
+                status=ExecutionStatus.SUCCESS,
+            ),
         ]
 
         for ev in events_to_publish:
@@ -197,29 +224,38 @@ class TestEventPipeline:
 # Memory integration
 # ─────────────────────────────────────────────
 
+
 class TestMemoryIntegration:
     @pytest.mark.asyncio
     async def test_store_and_retrieve(self, memory):
         agent_id = "mem-test-agent"
 
-        await memory.store(agent_id, "The deployment is on port 8080",
-                           memory_type=MemoryType.SEMANTIC)
-        await memory.store(agent_id, "Never commit secrets to git",
-                           memory_type=MemoryType.PROCEDURAL)
-        await memory.store(agent_id, "Previously failed to connect to database on port 5432",
-                           memory_type=MemoryType.EPISODIC)
+        await memory.store(
+            agent_id, "The deployment is on port 8080", memory_type=MemoryType.SEMANTIC
+        )
+        await memory.store(
+            agent_id, "Never commit secrets to git", memory_type=MemoryType.PROCEDURAL
+        )
+        await memory.store(
+            agent_id,
+            "Previously failed to connect to database on port 5432",
+            memory_type=MemoryType.EPISODIC,
+        )
 
         results = await memory.retrieve(agent_id, "deployment configuration")
         assert len(results) > 0
         # Port 8080 is semantically related to deployment
-        assert any("8080" in r.entry.content or "port" in r.entry.content.lower()
-                   for r in results)
+        assert any("8080" in r.entry.content or "port" in r.entry.content.lower() for r in results)
 
     @pytest.mark.asyncio
     async def test_context_window_returns_string(self, memory):
         agent_id = "ctx-test-agent"
-        await memory.store(agent_id, "User prefers Python over JavaScript",
-                           memory_type=MemoryType.SEMANTIC, importance=ImportanceLevel.HIGH)
+        await memory.store(
+            agent_id,
+            "User prefers Python over JavaScript",
+            memory_type=MemoryType.SEMANTIC,
+            importance=ImportanceLevel.HIGH,
+        )
         ctx = await memory.get_context_window(agent_id, "what language should I use")
         assert isinstance(ctx, str)
 
@@ -241,6 +277,7 @@ class TestMemoryIntegration:
 # Orchestration integration
 # ─────────────────────────────────────────────
 
+
 class TestOrchestrationIntegration:
     @pytest.mark.asyncio
     async def test_task_graph_executes(self):
@@ -257,8 +294,13 @@ class TestOrchestrationIntegration:
                 if orch._active_graph:
                     orch._active_graph.mark_completed(tid)
 
-        executor = SubAgent("exec-1", "Executor", AgentRole.EXECUTOR,
-                            AgentFramework.CLAUDE_CODE, max_concurrent_tasks=3)
+        executor = SubAgent(
+            "exec-1",
+            "Executor",
+            AgentRole.EXECUTOR,
+            AgentFramework.CLAUDE_CODE,
+            max_concurrent_tasks=3,
+        )
         executor.set_handler(exec_handler)
         orch.register_agent(executor)
 
@@ -294,36 +336,49 @@ class TestOrchestrationIntegration:
 # Confidence + replay integration
 # ─────────────────────────────────────────────
 
+
 class TestConfidenceReplayIntegration:
     @pytest.mark.asyncio
     async def test_looping_agent_detected(self):
         """A looping agent session should score low and get flagged."""
         session_id = str(uuid.uuid4())
         session = AgentSession(
-            session_id=session_id, agent_id="loop-agent",
-            framework=AgentFramework.CLAUDE_CODE, goal="Fix the bug"
+            session_id=session_id,
+            agent_id="loop-agent",
+            framework=AgentFramework.CLAUDE_CODE,
+            goal="Fix the bug",
         )
 
         # Build a looping event sequence
         events = []
         for i in range(12):
-            events.append(AgentEvent(
-                session_id=session_id, agent_id="loop-agent",
-                framework=AgentFramework.CLAUDE_CODE,
-                event_type=EventType.TOOL_CALL, step_number=i * 2,
-                tool_call=ToolCallData(
-                    tool_name="bash" if i % 2 == 0 else "file_read",
-                    raw_command="grep error logs/app.log",
-                    arguments={"command": "grep error logs/app.log"},
-                ),
-            ))
-            events.append(AgentEvent(
-                session_id=session_id, agent_id="loop-agent",
-                framework=AgentFramework.CLAUDE_CODE,
-                event_type=EventType.TOOL_RESULT, step_number=i * 2 + 1,
-                status=ExecutionStatus.SUCCESS,
-                tool_result=ToolResultData(tool_name="bash", output="error: connection refused"),
-            ))
+            events.append(
+                AgentEvent(
+                    session_id=session_id,
+                    agent_id="loop-agent",
+                    framework=AgentFramework.CLAUDE_CODE,
+                    event_type=EventType.TOOL_CALL,
+                    step_number=i * 2,
+                    tool_call=ToolCallData(
+                        tool_name="bash" if i % 2 == 0 else "file_read",
+                        raw_command="grep error logs/app.log",
+                        arguments={"command": "grep error logs/app.log"},
+                    ),
+                )
+            )
+            events.append(
+                AgentEvent(
+                    session_id=session_id,
+                    agent_id="loop-agent",
+                    framework=AgentFramework.CLAUDE_CODE,
+                    event_type=EventType.TOOL_RESULT,
+                    step_number=i * 2 + 1,
+                    status=ExecutionStatus.SUCCESS,
+                    tool_result=ToolResultData(
+                        tool_name="bash", output="error: connection refused"
+                    ),
+                )
+            )
 
         scorer = ConfidenceScorer()
         result = scorer.score(events, goal="Fix the bug")
@@ -340,5 +395,5 @@ class TestConfidenceReplayIntegration:
             assert rs.failure_analysis.primary_cause in (
                 FailureCause.REPEATED_TOOL_FAILURE,
                 FailureCause.INFINITE_LOOP,
-                FailureCause.UNKNOWN
+                FailureCause.UNKNOWN,
             )

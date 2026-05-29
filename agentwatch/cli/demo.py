@@ -20,37 +20,60 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from agentwatch.core.event_bus import EventBus
-from agentwatch.core.safety import SafetyEngine, SafetyPolicy
+from agentwatch.core.safety import SafetyEngine
 from agentwatch.core.schema import (
-    AgentEvent, AgentFramework, AgentSession, EventType,
-    ExecutionStatus, RiskLevel, SafetyCheckData, ToolCallData, ToolResultData,
+    AgentEvent,
+    AgentFramework,
+    AgentSession,
+    EventType,
+    ExecutionStatus,
+    ToolCallData,
+    ToolResultData,
 )
+from agentwatch.memory.engine import ImportanceLevel, MemoryEngine, MemoryType
 from agentwatch.replay.engine import ReplayEngine, ReplaySpeed
 from agentwatch.scoring.confidence import ConfidenceScorer
-from agentwatch.memory.engine import MemoryEngine, MemoryType, ImportanceLevel
 from agentwatch.tracing.collector import TraceCollector
 
 # ─────────────────────────────────────────────
 # Color helpers
 # ─────────────────────────────────────────────
 
-def green(s: str) -> str: return f"\033[92m{s}\033[0m"
-def red(s: str) -> str: return f"\033[91m{s}\033[0m"
-def yellow(s: str) -> str: return f"\033[93m{s}\033[0m"
-def blue(s: str) -> str: return f"\033[94m{s}\033[0m"
-def bold(s: str) -> str: return f"\033[1m{s}\033[0m"
-def dim(s: str) -> str: return f"\033[2m{s}\033[0m"
+
+def green(s: str) -> str:
+    return f"\033[92m{s}\033[0m"
+
+
+def red(s: str) -> str:
+    return f"\033[91m{s}\033[0m"
+
+
+def yellow(s: str) -> str:
+    return f"\033[93m{s}\033[0m"
+
+
+def blue(s: str) -> str:
+    return f"\033[94m{s}\033[0m"
+
+
+def bold(s: str) -> str:
+    return f"\033[1m{s}\033[0m"
+
+
+def dim(s: str) -> str:
+    return f"\033[2m{s}\033[0m"
 
 
 def section(title: str) -> None:
     print(f"\n{bold('─' * 60)}")
     print(f"{bold(blue('  ' + title))}")
-    print(bold('─' * 60))
+    print(bold("─" * 60))
 
 
 # ─────────────────────────────────────────────
 # Build a synthetic failing session
 # ─────────────────────────────────────────────
+
 
 def build_demo_session():
     session_id = "demo-session-001"
@@ -67,45 +90,99 @@ def build_demo_session():
         )
 
     events = [
-        ev(EventType.SESSION_START, goal="Clean up old log files and free disk space", step_number=0),
-        ev(EventType.PLANNER_OUTPUT, step_number=1,
-           planner_output_preview="I'll help clean up log files. Let me start by listing the /var/log directory."),
-        ev(EventType.TOOL_CALL, step_number=2,
-           tool_call=ToolCallData(tool_name="bash", raw_command="ls -lh /var/log/", arguments={"command": "ls -lh /var/log/"})),
-        ev(EventType.TOOL_RESULT, step_number=3,
-           status=ExecutionStatus.SUCCESS,
-           tool_result=ToolResultData(tool_name="bash", output="total 2.4G\n-rw-r--r-- 1 root root 1.2G syslog\n-rw-r--r-- 1 root root 800M auth.log")),
-        ev(EventType.TOOL_CALL, step_number=4,
-           tool_call=ToolCallData(tool_name="bash", raw_command="find /var/log -name '*.log' -mtime +30",
-                                  arguments={"command": "find /var/log -name '*.log' -mtime +30"})),
-        ev(EventType.TOOL_RESULT, step_number=5,
-           status=ExecutionStatus.SUCCESS,
-           tool_result=ToolResultData(tool_name="bash", output="/var/log/auth.log.3\n/var/log/syslog.4")),
+        ev(
+            EventType.SESSION_START,
+            goal="Clean up old log files and free disk space",
+            step_number=0,
+        ),
+        ev(
+            EventType.PLANNER_OUTPUT,
+            step_number=1,
+            planner_output_preview="I'll help clean up log files. Let me start by listing the /var/log directory.",
+        ),
+        ev(
+            EventType.TOOL_CALL,
+            step_number=2,
+            tool_call=ToolCallData(
+                tool_name="bash",
+                raw_command="ls -lh /var/log/",
+                arguments={"command": "ls -lh /var/log/"},
+            ),
+        ),
+        ev(
+            EventType.TOOL_RESULT,
+            step_number=3,
+            status=ExecutionStatus.SUCCESS,
+            tool_result=ToolResultData(
+                tool_name="bash",
+                output="total 2.4G\n-rw-r--r-- 1 root root 1.2G syslog\n-rw-r--r-- 1 root root 800M auth.log",
+            ),
+        ),
+        ev(
+            EventType.TOOL_CALL,
+            step_number=4,
+            tool_call=ToolCallData(
+                tool_name="bash",
+                raw_command="find /var/log -name '*.log' -mtime +30",
+                arguments={"command": "find /var/log -name '*.log' -mtime +30"},
+            ),
+        ),
+        ev(
+            EventType.TOOL_RESULT,
+            step_number=5,
+            status=ExecutionStatus.SUCCESS,
+            tool_result=ToolResultData(
+                tool_name="bash", output="/var/log/auth.log.3\n/var/log/syslog.4"
+            ),
+        ),
         # ← This one gets blocked
-        ev(EventType.TOOL_CALL, step_number=6,
-           tool_call=ToolCallData(
-               tool_name="bash",
-               raw_command="rm -rf /var/log/*",
-               arguments={"command": "rm -rf /var/log/*"},
-               affected_resources=["/var/log"],
-           )),
+        ev(
+            EventType.TOOL_CALL,
+            step_number=6,
+            tool_call=ToolCallData(
+                tool_name="bash",
+                raw_command="rm -rf /var/log/*",
+                arguments={"command": "rm -rf /var/log/*"},
+                affected_resources=["/var/log"],
+            ),
+        ),
         # After block, agent tries a safer alternative
-        ev(EventType.TOOL_CALL, step_number=7,
-           tool_call=ToolCallData(tool_name="bash",
-                                  raw_command="truncate -s 0 /var/log/auth.log.3",
-                                  arguments={"command": "truncate -s 0 /var/log/auth.log.3"})),
-        ev(EventType.TOOL_RESULT, step_number=8,
-           status=ExecutionStatus.SUCCESS,
-           tool_result=ToolResultData(tool_name="bash", output="")),
-        ev(EventType.TOOL_CALL, step_number=9,
-           tool_call=ToolCallData(tool_name="bash",
-                                  raw_command="truncate -s 0 /var/log/syslog.4",
-                                  arguments={"command": "truncate -s 0 /var/log/syslog.4"})),
-        ev(EventType.TOOL_RESULT, step_number=10,
-           status=ExecutionStatus.SUCCESS,
-           tool_result=ToolResultData(tool_name="bash", output="")),
-        ev(EventType.AGENT_END, step_number=11, status=ExecutionStatus.SUCCESS,
-           metadata={"final_result": "Cleared old log files. Freed approximately 800MB."}),
+        ev(
+            EventType.TOOL_CALL,
+            step_number=7,
+            tool_call=ToolCallData(
+                tool_name="bash",
+                raw_command="truncate -s 0 /var/log/auth.log.3",
+                arguments={"command": "truncate -s 0 /var/log/auth.log.3"},
+            ),
+        ),
+        ev(
+            EventType.TOOL_RESULT,
+            step_number=8,
+            status=ExecutionStatus.SUCCESS,
+            tool_result=ToolResultData(tool_name="bash", output=""),
+        ),
+        ev(
+            EventType.TOOL_CALL,
+            step_number=9,
+            tool_call=ToolCallData(
+                tool_name="bash",
+                raw_command="truncate -s 0 /var/log/syslog.4",
+                arguments={"command": "truncate -s 0 /var/log/syslog.4"},
+            ),
+        ),
+        ev(
+            EventType.TOOL_RESULT,
+            step_number=10,
+            status=ExecutionStatus.SUCCESS,
+            tool_result=ToolResultData(tool_name="bash", output=""),
+        ),
+        ev(
+            EventType.AGENT_END,
+            step_number=11,
+            status=ExecutionStatus.SUCCESS,
+            metadata={"final_result": "Cleared old log files. Freed approximately 800MB."},
+        ),
         ev(EventType.SESSION_END, step_number=12, status=ExecutionStatus.SUCCESS),
     ]
 
@@ -125,6 +202,7 @@ def build_demo_session():
 # ─────────────────────────────────────────────
 # Demo 1: Safety Engine
 # ─────────────────────────────────────────────
+
 
 async def demo_safety():
     section("DEMO 1 — Safety Engine")
@@ -153,13 +231,18 @@ async def demo_safety():
 
         if safety:
             level_color = {
-                "safe": green, "low": blue, "medium": yellow,
-                "high": yellow, "critical": red
+                "safe": green,
+                "low": blue,
+                "medium": yellow,
+                "high": yellow,
+                "critical": red,
             }.get(safety.risk_level.value, str)
 
             status_icon = "🚫" if result.is_blocked else "✓"
-            print(f"  {status_icon}  {level_color(f'[{safety.risk_level.value.upper():8}]')} "
-                  f"{dim(cmd[:50])} {dim('→')} {label}")
+            print(
+                f"  {status_icon}  {level_color(f'[{safety.risk_level.value.upper():8}]')} "
+                f"{dim(cmd[:50])} {dim('→')} {label}"
+            )
             if safety.reasons:
                 print(f"       {dim(safety.reasons[0])}")
         else:
@@ -171,6 +254,7 @@ async def demo_safety():
 # ─────────────────────────────────────────────
 # Demo 2: Trace Collection + Replay
 # ─────────────────────────────────────────────
+
 
 async def demo_replay():
     section("DEMO 2 — Trace Collection & Replay Engine")
@@ -212,9 +296,15 @@ async def demo_replay():
     print(f"\n  {bold('Step-by-step replay (instant speed):')}")
     async for step in engine.replay_async(rs, speed=ReplaySpeed.INSTANT):
         ev = step.event
-        icon = "🔧" if ev.event_type == EventType.TOOL_CALL else \
-               "✅" if ev.event_type == EventType.TOOL_RESULT else \
-               "🚫" if ev.is_blocked else "•"
+        icon = (
+            "🔧"
+            if ev.event_type == EventType.TOOL_CALL
+            else "✅"
+            if ev.event_type == EventType.TOOL_RESULT
+            else "🚫"
+            if ev.is_blocked
+            else "•"
+        )
 
         annotations = f" {yellow(' '.join(step.annotations))}" if step.annotations else ""
         tool_info = f" {dim(ev.tool_call.tool_name)}" if ev.tool_call else ""
@@ -227,6 +317,7 @@ async def demo_replay():
 # ─────────────────────────────────────────────
 # Demo 3: Confidence Scoring
 # ─────────────────────────────────────────────
+
 
 async def demo_confidence():
     section("DEMO 3 — Confidence Scoring Engine")
@@ -244,15 +335,24 @@ async def demo_confidence():
 
     result = scorer.score(processed, goal=session.goal)
 
-    score_bar = lambda s: (
-        green("█" * int(s * 20) + "░" * (20 - int(s * 20)))
-        if s >= 0.7 else yellow("█" * int(s * 20) + "░" * (20 - int(s * 20)))
-        if s >= 0.4 else red("█" * int(s * 20) + "░" * (20 - int(s * 20)))
-    )
+    def score_bar(s: float) -> str:
+        bar_len = int(s * 20)
+        chars = "█" * bar_len + "░" * (20 - bar_len)
+        if s >= 0.7:
+            return green(chars)
+        if s >= 0.4:
+            return yellow(chars)
+        return red(chars)
 
-    print(f"\n  {bold('Overall Score:')}    {score_bar(result.overall_score)} {result.overall_score:.3f}")
-    print(f"  {bold('Goal Alignment:')}   {score_bar(result.goal_alignment)} {result.goal_alignment:.3f}")
-    print(f"  {bold('Consistency:')}      {score_bar(result.consistency_score)} {result.consistency_score:.3f}")
+    print(
+        f"\n  {bold('Overall Score:')}    {score_bar(result.overall_score)} {result.overall_score:.3f}"
+    )
+    print(
+        f"  {bold('Goal Alignment:')}   {score_bar(result.goal_alignment)} {result.goal_alignment:.3f}"
+    )
+    print(
+        f"  {bold('Consistency:')}      {score_bar(result.consistency_score)} {result.consistency_score:.3f}"
+    )
 
     print(f"\n  {bold('Components:')}")
     for k, v in result.component_scores.items():
@@ -264,13 +364,14 @@ async def demo_confidence():
             print(f"    {yellow('⚠')}  {flag}")
 
     print(f"\n  {bold('Explanation:')}")
-    for line in result.explanation.split('\n'):
+    for line in result.explanation.split("\n"):
         print(f"    {dim(line)}")
 
 
 # ─────────────────────────────────────────────
 # Demo 4: Memory Engine
 # ─────────────────────────────────────────────
+
 
 async def demo_memory():
     section("DEMO 4 — Memory Engine")
@@ -281,20 +382,40 @@ async def demo_memory():
     print("  Storing memories across types...\n")
 
     # Episodic
-    e1 = await memory.store(agent_id, "Ran cleanup script on 2024-11-01, removed 800MB from /var/log",
-                             memory_type=MemoryType.EPISODIC, importance=ImportanceLevel.MEDIUM)
-    e2 = await memory.store(agent_id, "Previous cleanup attempt failed — rm -rf was blocked by safety engine",
-                             memory_type=MemoryType.EPISODIC, importance=ImportanceLevel.HIGH)
+    await memory.store(
+        agent_id,
+        "Ran cleanup script on 2024-11-01, removed 800MB from /var/log",
+        memory_type=MemoryType.EPISODIC,
+        importance=ImportanceLevel.MEDIUM,
+    )
+    await memory.store(
+        agent_id,
+        "Previous cleanup attempt failed — rm -rf was blocked by safety engine",
+        memory_type=MemoryType.EPISODIC,
+        importance=ImportanceLevel.HIGH,
+    )
 
     # Semantic
-    s1 = await memory.store(agent_id, "The /var/log directory requires root permissions for deletion",
-                             memory_type=MemoryType.SEMANTIC, importance=ImportanceLevel.HIGH)
-    s2 = await memory.store(agent_id, "Use 'truncate -s 0' instead of rm to safely zero out log files",
-                             memory_type=MemoryType.SEMANTIC, importance=ImportanceLevel.CRITICAL)
+    await memory.store(
+        agent_id,
+        "The /var/log directory requires root permissions for deletion",
+        memory_type=MemoryType.SEMANTIC,
+        importance=ImportanceLevel.HIGH,
+    )
+    await memory.store(
+        agent_id,
+        "Use 'truncate -s 0' instead of rm to safely zero out log files",
+        memory_type=MemoryType.SEMANTIC,
+        importance=ImportanceLevel.CRITICAL,
+    )
 
     # Procedural
-    p1 = await memory.store(agent_id, "Workflow: 1) list files 2) find old logs 3) truncate safely 4) verify freed space",
-                             memory_type=MemoryType.PROCEDURAL, importance=ImportanceLevel.HIGH)
+    await memory.store(
+        agent_id,
+        "Workflow: 1) list files 2) find old logs 3) truncate safely 4) verify freed space",
+        memory_type=MemoryType.PROCEDURAL,
+        importance=ImportanceLevel.HIGH,
+    )
 
     print(f"  Stored {memory.stats(agent_id)['total_entries']} entries")
     print(f"  By type: {memory.stats(agent_id)['by_type']}\n")
@@ -305,9 +426,13 @@ async def demo_memory():
     results = await memory.retrieve(agent_id, query, top_k=4)
 
     for i, r in enumerate(results, 1):
-        type_color = {"episodic": blue, "semantic": green, "procedural": yellow}[r.entry.memory_type.value]
-        print(f"  [{i}] {type_color(f'[{r.entry.memory_type.value.upper()}]')} "
-              f"score={r.similarity_score:.3f}  {r.entry.importance.value}")
+        type_color = {"episodic": blue, "semantic": green, "procedural": yellow}[
+            r.entry.memory_type.value
+        ]
+        print(
+            f"  [{i}] {type_color(f'[{r.entry.memory_type.value.upper()}]')} "
+            f"score={r.similarity_score:.3f}  {r.entry.importance.value}"
+        )
         print(f"      {dim(r.entry.content[:80])}")
 
     # Context window
@@ -320,28 +445,55 @@ async def demo_memory():
 # Demo 5: Multi-agent Orchestration
 # ─────────────────────────────────────────────
 
+
 async def demo_orchestration():
     section("DEMO 5 — Multi-Agent Orchestration")
 
     from agentwatch.orchestration.engine import (
-        OrchestrationEngine, SubAgent, AgentRole, TaskGraph, MessageType
+        AgentRole,
+        MessageType,
+        OrchestrationEngine,
+        SubAgent,
+        TaskGraph,
     )
 
     bus = EventBus()
     orch = OrchestrationEngine(session_id="orch-demo", event_bus=bus)
 
     # Define agents
-    planner = SubAgent("planner-1", "Planner", AgentRole.PLANNER, AgentFramework.CLAUDE_CODE,
-                       capabilities=["decompose", "plan"])
-    executor1 = SubAgent("exec-1", "Executor A", AgentRole.EXECUTOR, AgentFramework.CLAUDE_CODE,
-                         capabilities=["bash", "file_ops"], max_concurrent_tasks=2)
-    executor2 = SubAgent("exec-2", "Executor B", AgentRole.EXECUTOR, AgentFramework.CLAUDE_CODE,
-                         capabilities=["web_search", "analysis"])
-    verifier = SubAgent("verify-1", "Verifier", AgentRole.VERIFIER, AgentFramework.CLAUDE_CODE,
-                        capabilities=["verify", "validate"])
+    planner = SubAgent(
+        "planner-1",
+        "Planner",
+        AgentRole.PLANNER,
+        AgentFramework.CLAUDE_CODE,
+        capabilities=["decompose", "plan"],
+    )
+    executor1 = SubAgent(
+        "exec-1",
+        "Executor A",
+        AgentRole.EXECUTOR,
+        AgentFramework.CLAUDE_CODE,
+        capabilities=["bash", "file_ops"],
+        max_concurrent_tasks=2,
+    )
+    executor2 = SubAgent(
+        "exec-2",
+        "Executor B",
+        AgentRole.EXECUTOR,
+        AgentFramework.CLAUDE_CODE,
+        capabilities=["web_search", "analysis"],
+    )
+    verifier = SubAgent(
+        "verify-1",
+        "Verifier",
+        AgentRole.VERIFIER,
+        AgentFramework.CLAUDE_CODE,
+        capabilities=["verify", "validate"],
+    )
 
     # Wire up simple handlers
     completed_tasks = []
+
     async def exec_handler(msg):
         if msg.message_type == MessageType.TASK_ASSIGN:
             tid = msg.payload.get("task_id")
@@ -363,11 +515,13 @@ async def demo_orchestration():
     t1 = graph.add_task("Collect CPU metrics", "Run top/vmstat and capture output")
     t2 = graph.add_task("Collect memory metrics", "Run free -m and smem", depends_on=[])
     t3 = graph.add_task("Collect disk metrics", "Run df -h and iostat")
-    t4 = graph.add_task("Analyze metrics", "Identify bottlenecks", depends_on=[t1.task_id, t2.task_id, t3.task_id])
-    t5 = graph.add_task("Generate report", "Write markdown report", depends_on=[t4.task_id])
+    t4 = graph.add_task(
+        "Analyze metrics", "Identify bottlenecks", depends_on=[t1.task_id, t2.task_id, t3.task_id]
+    )
+    graph.add_task("Generate report", "Write markdown report", depends_on=[t4.task_id])
 
     print(f"  Task graph: {len(graph.nodes)} tasks, goal: {bold(graph.goal[:50])}")
-    print(f"  Dependency chain: collect → analyze → report\n")
+    print("  Dependency chain: collect → analyze → report\n")
 
     result = await orch.run_graph(graph)
     await orch.stop()
@@ -380,21 +534,26 @@ async def demo_orchestration():
 
     print(f"\n  {bold('Agent status:')}")
     for agent_status in orch.agent_status():
-        print(f"    {agent_status['name']:<15} role={agent_status['role']:<12} "
-              f"active={agent_status['active_tasks']}")
+        print(
+            f"    {agent_status['name']:<15} role={agent_status['role']:<12} "
+            f"active={agent_status['active_tasks']}"
+        )
 
 
 # ─────────────────────────────────────────────
 # Main
 # ─────────────────────────────────────────────
 
+
 async def main():
-    print(bold("""
+    print(
+        bold("""
 ╔══════════════════════════════════════════════════════════════╗
 ║         AgentWatch — Demo Suite v0.1.0                       ║
 ║  Reliability, Safety & Observability Layer for AI Agents     ║
 ╚══════════════════════════════════════════════════════════════╝
-"""))
+""")
+    )
 
     await demo_safety()
     await demo_replay()
@@ -405,9 +564,9 @@ async def main():
     print(f"\n{bold(green('✓ All demos complete'))}\n")
     print("Next steps:")
     print(f"  {bold('agentwatch serve')}           — Start the API server")
-    print(f"  {bold('agentwatch watch \"<prompt>\"')} — Watch a Claude Code session")
+    print(f"  {bold('agentwatch watch "<prompt>"')} — Watch a Claude Code session")
     print(f"  {bold('agentwatch replay <file>')}   — Replay a saved session")
-    print(f"  {bold('agentwatch safety \"<cmd>\"')}  — Risk-score a command")
+    print(f"  {bold('agentwatch safety "<cmd>"')}  — Risk-score a command")
     print(f"  {bold('agentwatch sessions')}         — List sessions via API\n")
 
 

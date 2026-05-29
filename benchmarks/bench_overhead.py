@@ -1,7 +1,9 @@
-import timeit
 import json
-from agentwatch.core.watcher import watch, GenericAdapter
+import timeit
+
 from agentwatch.core.safety import SafetyEngine
+from agentwatch.core.watcher import GenericAdapter, watch
+
 
 # Simple dummy agent function for baseline
 def dummy_agent_sync():
@@ -11,19 +13,23 @@ def dummy_agent_sync():
         total += i
     return "ok"
 
+
 # Instrumented call without safety engine
 def dummy_agent_watch_no_safety():
     watched = watch(dummy_agent_sync)  # watch without safety
     return watched()
 
+
 # Instrumented call with safety engine
 safety_engine = SafetyEngine()
+
 
 def dummy_agent_watch_with_safety():
     # Use GenericAdapter directly because watch() does not expose a safety_engine argument.
     adapter = GenericAdapter(dummy_agent_sync, safety_engine=safety_engine)
     watched = adapter.attach()
     return watched()
+
 
 # Full API round‑trip (starts the FastAPI server and posts an event)
 # For the benchmark we mock the server call to avoid external services.
@@ -32,6 +38,7 @@ def full_api_round_trip():
     # with a minimal, correctly‑typed AgentEvent. This exercises the async
     # dispatch path without starting the FastAPI server.
     import asyncio
+
     from agentwatch.core.event_bus import EventBus
     from agentwatch.core.schema import AgentEvent, EventType
 
@@ -80,6 +87,7 @@ def run_benchmarks():
         if name != "baseline":
             data["overhead_%"] = round(((data["mean_ms"] - base) / base) * 100, 2)
     print(json.dumps(results, indent=2))
+
 
 if __name__ == "__main__":
     run_benchmarks()
