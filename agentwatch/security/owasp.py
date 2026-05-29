@@ -141,6 +141,21 @@ class OwaspScanner:
                         )
         return scan
 
+    def _flatten_values(self, data: Any) -> list[str]:
+        """Recursively extract all string-like values from a data structure."""
+        parts: list[str] = []
+        if isinstance(data, str):
+            parts.append(data)
+        elif isinstance(data, dict):
+            for v in data.values():
+                parts.extend(self._flatten_values(v))
+        elif isinstance(data, (list, tuple, set)):
+            for item in data:
+                parts.extend(self._flatten_values(item))
+        elif data is not None:
+            parts.append(str(data))
+        return parts
+
     def _blob_of(self, event: AgentEvent) -> str:
         parts: list[str] = []
         if event.tool_call:
