@@ -184,7 +184,9 @@ class TelemetryProvider:
 
                     metric_exporter = OTLPMetricExporter(
                         endpoint=self._config.otlp_endpoint,
-                        insecure=self._config.insecure if self._config.insecure is not None else True,
+                        insecure=self._config.insecure
+                        if self._config.insecure is not None
+                        else True,
                         headers=self._config.headers,
                     )
                     readers.append(PeriodicExportingMetricReader(metric_exporter))

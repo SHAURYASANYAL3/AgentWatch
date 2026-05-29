@@ -346,9 +346,7 @@ class SafetyEngine:
         block_immediate = False
         for pat in self._scorer._patterns:
             if pat.block_by_default:
-                full_text = " ".join(
-                    filter(None, [tool_call.raw_command, tool_call.tool_name])
-                )
+                full_text = " ".join(filter(None, [tool_call.raw_command, tool_call.tool_name]))
                 if re.search(pat.pattern, full_text, re.IGNORECASE):
                     block_immediate = True
                     break
@@ -494,9 +492,7 @@ class SafetyEngine:
 
         # Honour block_by_default patterns even when general policy is lenient
         if not block:
-            full_text = " ".join(
-                [x for x in [tool_call.raw_command, tool_call.tool_name] if x]
-            )
+            full_text = " ".join([x for x in [tool_call.raw_command, tool_call.tool_name] if x])
             for pat in self._scorer._patterns:
                 if pat.block_by_default and re.search(pat.pattern, full_text, re.IGNORECASE):
                     block = True

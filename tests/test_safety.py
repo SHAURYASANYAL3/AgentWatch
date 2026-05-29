@@ -136,9 +136,14 @@ def test_policy_dsl_pause_on_low_confidence():
 
 
 def test_policy_dsl_parenthesized_short_circuit():
-    engine = PolicyEngine([
-        Rule(condition="(true or tool == 'bash') and confidence < 0.5", action=PolicyAction.PAUSE_AND_ALERT),
-    ])
+    engine = PolicyEngine(
+        [
+            Rule(
+                condition="(true or tool == 'bash') and confidence < 0.5",
+                action=PolicyAction.PAUSE_AND_ALERT,
+            ),
+        ]
+    )
     ev = _tool_event("read", "x")
     from agentwatch.core.schema import ConfidenceData
 
