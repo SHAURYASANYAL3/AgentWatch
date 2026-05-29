@@ -123,6 +123,10 @@ class TelemetryProvider:
         }
 
     def initialize(self) -> None:
+        if self._initialized:
+            logger.debug("Telemetry already initialized; skipping.")
+            return
+
         if not _OTEL_AVAILABLE:
             self._initialized = True
             logger.info("OpenTelemetry not available — using no-op telemetry fallback")
@@ -143,7 +147,11 @@ class TelemetryProvider:
             try:
                 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 
-                self._exporter = OTLPSpanExporter(endpoint=self._config.otlp_endpoint)
+                self._exporter = OTLPSpanExporter(
+                    endpoint=self._config.otlp_endpoint,
+                    insecure=self._config.insecure if self._config.insecure is not None else True,
+                    headers=self._config.headers,
+                )
                 tracer_provider.add_span_processor(BatchSpanProcessor(self._exporter))
                 logger.info("OTLP span exporter configured: %s", self._config.otlp_endpoint)
             except ImportError:
@@ -155,7 +163,11 @@ class TelemetryProvider:
                 self._exporter = console_exporter
             tracer_provider.add_span_processor(BatchSpanProcessor(console_exporter))
 
-        trace.set_tracer_provider(tracer_provider)
+        try:
+            trace.set_tracer_provider(tracer_provider)
+        except RuntimeError:
+            logger.debug("Tracer provider already set; using existing.")
+
         self._tracer = trace.get_tracer(
             self._config.service_name,
             self._config.service_version,
@@ -170,7 +182,11 @@ class TelemetryProvider:
                         OTLPMetricExporter,
                     )
 
-                    metric_exporter = OTLPMetricExporter(endpoint=self._config.otlp_endpoint)
+                    metric_exporter = OTLPMetricExporter(
+                        endpoint=self._config.otlp_endpoint,
+                        insecure=self._config.insecure if self._config.insecure is not None else True,
+                        headers=self._config.headers,
+                    )
                     readers.append(PeriodicExportingMetricReader(metric_exporter))
                 except ImportError:
                     pass
@@ -183,7 +199,11 @@ class TelemetryProvider:
                 )
 
             meter_provider = MeterProvider(resource=resource, metric_readers=readers)
-            metrics.set_meter_provider(meter_provider)
+            try:
+                metrics.set_meter_provider(meter_provider)
+            except RuntimeError:
+                logger.debug("Meter provider already set; using existing.")
+
             self._meter = metrics.get_meter(self._config.service_name)
             self._create_instruments()
 

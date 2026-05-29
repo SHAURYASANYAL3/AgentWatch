@@ -137,6 +137,11 @@ class EventBus:
 
         def decorator(fn: AnyHandler) -> AnyHandler:
             _id = handler_id or f"{fn.__module__}.{fn.__qualname__}"
+            
+            # CodeRabbit: Clean stale registration if ID is reused
+            if _id in self._handlers:
+                self.unsubscribe(_id)
+                
             is_async = inspect.iscoroutinefunction(fn)
             reg = HandlerRegistration(
                 handler_id=_id,
@@ -176,6 +181,11 @@ class EventBus:
             The handler ID assigned to this subscription.
         """
         _id = handler_id or f"{fn.__module__}.{fn.__qualname__}.{id(fn)}"
+        
+        # CodeRabbit: Clean stale registration if ID is reused
+        if _id in self._handlers:
+            self.unsubscribe(_id)
+            
         is_async = inspect.iscoroutinefunction(fn)
         reg = HandlerRegistration(
             handler_id=_id,

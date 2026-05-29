@@ -231,10 +231,10 @@ class RiskScorer:
             candidates.append(tool_call.raw_command)
         if tool_call.tool_name:
             candidates.append(tool_call.tool_name)
-        for v in tool_call.arguments.values():
-            if isinstance(v, str):
-                candidates.append(v)
 
+        # We no longer scan all arguments by default. The ToolCallData validator
+        # ensures raw_command is populated for shell-like calls, and other tools
+        # should explicitly set raw_command for any text that needs safety scanning.
         full_text = " ".join(candidates)
 
         matched_level = RiskLevel.SAFE
@@ -342,25 +342,41 @@ class SafetyEngine:
             explanation=audit.rationale,
         )
 
-        # 3. Aggregate safety data for policy evaluation
+        # 3. Static/Pattern-based blocking (pre-DSL)
+        block_immediate = False
+        for pat in self._scorer._patterns:
+            if pat.block_by_default:
+                full_text = " ".join(
+                    filter(None, [tool_call.raw_command, tool_call.tool_name])
+                )
+                if re.search(pat.pattern, full_text, re.IGNORECASE):
+                    block_immediate = True
+                    break
+
+        # 4. Aggregate safety data for policy evaluation
         safety_data = SafetyCheckData(
             risk_level=risk_level,
             risk_score=risk_score,
+            blocked=block_immediate,
             reasons=reasons,
             matched_policies=policies,
             approval_timeout_seconds=self._policy.approval_timeout_seconds,
         )
         event.safety = safety_data
 
-        # 4. DSL Policy evaluation
+        # 5. DSL Policy evaluation
         decision = self._policy_engine.evaluate(event)
 
-        block_immediate = decision.action == PolicyAction.BLOCK
+        # Preserve previously computed block_immediate if DSL says ALLOW
+        if decision.action == PolicyAction.BLOCK:
+            block_immediate = True
+        elif decision.action == PolicyAction.PAUSE_AND_ALERT:
+            block_immediate = True
+
         requires_approval = decision.action == PolicyAction.REQUIRE_APPROVAL
-        pause_and_alert = decision.action == PolicyAction.PAUSE_AND_ALERT
 
         # Fallback to static policy if no DSL rules matched
-        if decision.action == PolicyAction.ALLOW:
+        if decision.action == PolicyAction.ALLOW and not block_immediate:
             if risk_level == RiskLevel.CRITICAL:
                 block_immediate = True
             elif risk_level == RiskLevel.HIGH and self._policy.block_on_high:
@@ -370,7 +386,7 @@ class SafetyEngine:
             elif risk_level == RiskLevel.MEDIUM and self._policy.require_approval_on_medium:
                 requires_approval = True
 
-        safety_data.blocked = block_immediate or pause_and_alert
+        safety_data.blocked = block_immediate
         safety_data.requires_approval = requires_approval and not safety_data.blocked
         if decision.reasons:
             safety_data.reasons.extend(decision.reasons)
@@ -388,7 +404,18 @@ class SafetyEngine:
             )
             return event
 
-        if requires_approval and self._approval_callback:
+        if requires_approval:
+            # CodeRabbit: Block if approval is required but no callback exists
+            if not self._approval_callback:
+                logger.warning(
+                    "Approval required for event %s but no callback registered. Blocking.",
+                    event.event_id,
+                )
+                event.status = ExecutionStatus.BLOCKED
+                safety_data.blocked = True
+                self._blocked_count += 1
+                return event
+
             approved = await self._request_approval(event, safety_data)
             if not approved:
                 event.status = ExecutionStatus.BLOCKED
@@ -468,7 +495,6 @@ class SafetyEngine:
         if not block:
             full_text = " ".join(
                 [x for x in [tool_call.raw_command, tool_call.tool_name] if x]
-                + [str(v) for v in tool_call.arguments.values() if isinstance(v, str)]
             )
             for pat in self._scorer._patterns:
                 if pat.block_by_default and re.search(pat.pattern, full_text, re.IGNORECASE):

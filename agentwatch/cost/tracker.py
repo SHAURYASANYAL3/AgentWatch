@@ -43,8 +43,8 @@ class CostTracker:
     ) -> SessionBudget:
         budget = SessionBudget(
             session_id=session_id,
-            token_budget=token_budget or self._default_token_budget,
-            usd_budget=usd_budget or self._default_usd_budget,
+            token_budget=token_budget if token_budget is not None else self._default_token_budget,
+            usd_budget=usd_budget if usd_budget is not None else self._default_usd_budget,
         )
         self._budgets[session_id] = budget
         return budget
