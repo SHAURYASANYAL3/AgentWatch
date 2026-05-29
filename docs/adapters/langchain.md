@@ -46,9 +46,9 @@ llm = ChatOpenAI(model="gpt-4", callbacks=[handler])
 You can customize the event bus if you need to route events to a custom backend:
 
 ```python
-from agentwatch.core.event_bus import LocalEventBus
+from agentwatch.core.event_bus import EventBus
 from agentwatch.adapters.langchain import AgentWatchCallbackHandler
 
-custom_bus = LocalEventBus()
+custom_bus = EventBus()
 handler = AgentWatchCallbackHandler(event_bus=custom_bus)
 ```
