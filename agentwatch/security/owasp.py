@@ -147,7 +147,7 @@ class OwaspScanner:
             if event.tool_call.raw_command:
                 parts.append(event.tool_call.raw_command)
             if event.tool_call.arguments:
-                parts.extend(self._extract_strings(event.tool_call.arguments))
+                parts.extend(self._flatten_values(event.tool_call.arguments))
         if event.tool_result and event.tool_result.output:
             parts.append(str(event.tool_result.output))
         if event.planner_output_preview:
@@ -156,18 +156,30 @@ class OwaspScanner:
             parts.append(event.prompt_preview)
         return "\n".join(parts)
 
-    def _extract_strings(self, data: Any) -> list[str]:
-        strings = []
+    def _flatten_values(self, data: Any, visited: set[int] | None = None) -> list[str]:
+        """Recursively extract all string-like values from a data structure."""
+        if visited is None:
+            visited = set()
+
+        parts: list[str] = []
+
+        # Track containers to avoid infinite recursion
+        if isinstance(data, (dict, list, tuple, set)):
+            if id(data) in visited:
+                return []
+            visited.add(id(data))
+
         if isinstance(data, str):
-            strings.append(data)
+            parts.append(data)
         elif isinstance(data, dict):
-            for key, value in data.items():
-                strings.extend(self._extract_strings(key))
-                strings.extend(self._extract_strings(value))
-        elif isinstance(data, list):
+            for v in data.values():
+                parts.extend(self._flatten_values(v, visited))
+        elif isinstance(data, (list, tuple, set)):
             for item in data:
-                strings.extend(self._extract_strings(item))
-        return strings
+                parts.extend(self._flatten_values(item, visited))
+        elif data is not None:
+            parts.append(str(data))
+        return parts
 
 
 __all__ = ["OwaspVector", "OwaspFinding", "OwaspScan", "OwaspScanner"]

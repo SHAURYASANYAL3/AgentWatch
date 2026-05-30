@@ -1,7 +1,7 @@
 name: PR Tests
 
 on:
-  pull_request:
+  pull_request_target:
     branches: [main]
 
 # Read code + write a status comment back to the PR.
@@ -17,6 +17,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          # Note: pull_request_target runs in the context of the base repo.
+          # Checking out the PR head is necessary to test the changes,
+          # but use caution as this runs with a write-capable GITHUB_TOKEN.
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
