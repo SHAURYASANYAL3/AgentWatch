@@ -520,7 +520,9 @@ class SafetyEngine:
         if final_block:
             self._blocked_count += 1
             if safety_data.requires_approval:
-                safety_data.reasons.append("Sync path cannot request human approval; blocked for safety.")
+                safety_data.reasons.append(
+                    "Sync path cannot request human approval; blocked for safety."
+                )
 
             logger.warning(
                 "BLOCKED (sync) [%s] risk=%s: %s",
