@@ -353,11 +353,9 @@ async def lifespan(app: FastAPI):
     global _db_session_factory
 
     if _IS_PROD and not _API_KEY:
-        logger.critical("AGENTWATCH_API_KEY is not set in production!")
-        # In a real production deployment, you might want to raise an exception here
-        # to prevent the server from starting in an insecure state.
-        # For now, we log as critical and the _require_api_key dependency
-        # will block all protected requests.
+        error_msg = "AGENTWATCH_API_KEY is not set in production! For security, the server will not start."
+        logger.critical(error_msg)
+        raise RuntimeError(error_msg)
 
     db_url = os.getenv("DATABASE_URL", "")
     if db_url:

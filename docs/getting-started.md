@@ -54,7 +54,7 @@ For a local Docker setup, the compose file already injects the core backend valu
 DATABASE_URL=postgresql+asyncpg://agentwatch:agentwatch@localhost:5432/agentwatch
 REDIS_URL=redis://localhost:6379/0
 CELERY_BROKER_URL=redis://localhost:6379/1
-AGENTWATCH_ENV=production
+AGENTWATCH_ENV=development
 AGENTWATCH_API_URL=http://localhost:8000
 NEXT_PUBLIC_API_URL=/api/v1
 ```
