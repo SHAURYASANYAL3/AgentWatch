@@ -141,36 +141,6 @@ class OwaspScanner:
                         )
         return scan
 
-    def _flatten_values(self, data: Any) -> list[str]:
-        """Recursively extract all string-like values from a data structure."""
-        parts: list[str] = []
-        if isinstance(data, str):
-            parts.append(data)
-        elif isinstance(data, dict):
-            for v in data.values():
-                parts.extend(self._flatten_values(v))
-        elif isinstance(data, (list, tuple, set)):
-            for item in data:
-                parts.extend(self._flatten_values(item))
-        elif data is not None:
-            parts.append(str(data))
-        return parts
-
-    def _blob_of(self, event: AgentEvent) -> str:
-        parts: list[str] = []
-        if event.tool_call:
-            if event.tool_call.raw_command:
-                parts.append(event.tool_call.raw_command)
-            if event.tool_call.arguments:
-                parts.extend(self._flatten_values(event.tool_call.arguments))
-        if event.tool_result and event.tool_result.output:
-            parts.append(str(event.tool_result.output))
-        if event.planner_output_preview:
-            parts.append(event.planner_output_preview)
-        if event.prompt_preview:
-            parts.append(event.prompt_preview)
-        return "\n".join(parts)
-
     def _flatten_values(self, data: Any, visited: set[int] | None = None) -> list[str]:
         """Recursively extract all string-like values from a data structure."""
         if visited is None:
@@ -195,6 +165,21 @@ class OwaspScanner:
         elif data is not None:
             parts.append(str(data))
         return parts
+
+    def _blob_of(self, event: AgentEvent) -> str:
+        parts: list[str] = []
+        if event.tool_call:
+            if event.tool_call.raw_command:
+                parts.append(event.tool_call.raw_command)
+            if event.tool_call.arguments:
+                parts.extend(self._flatten_values(event.tool_call.arguments))
+        if event.tool_result and event.tool_result.output:
+            parts.append(str(event.tool_result.output))
+        if event.planner_output_preview:
+            parts.append(event.planner_output_preview)
+        if event.prompt_preview:
+            parts.append(event.prompt_preview)
+        return "\n".join(parts)
 
 
 __all__ = ["OwaspVector", "OwaspFinding", "OwaspScan", "OwaspScanner"]
