@@ -161,7 +161,8 @@ class OwaspScanner:
         if isinstance(data, str):
             strings.append(data)
         elif isinstance(data, dict):
-            for value in data.values():
+            for key, value in data.items():
+                strings.extend(self._extract_strings(key))
                 strings.extend(self._extract_strings(value))
         elif isinstance(data, list):
             for item in data:
