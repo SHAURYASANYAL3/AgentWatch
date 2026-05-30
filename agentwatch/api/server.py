@@ -172,7 +172,7 @@ _ws_clients: list[WebSocket] = []
 _API_KEY: str | None = os.getenv("AGENTWATCH_API_KEY") or None
 
 # Environment detection for fail-closed logic
-_ENV = os.getenv("AGENTWATCH_ENV") or os.getenv("ENVIRONMENT") or "production"
+_ENV = os.getenv("AGENTWATCH_ENV") or os.getenv("ENVIRONMENT") or "development"
 _IS_PROD = _ENV.lower() == "production"
 
 
