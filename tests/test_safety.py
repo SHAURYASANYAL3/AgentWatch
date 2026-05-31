@@ -353,6 +353,7 @@ async def test_cli_approval_handler_does_not_block_loop(monkeypatch):
 
     # 1. Start a concurrent async task that ticks every 0.05s
     ticks = 0
+
     async def ticker():
         nonlocal ticks
         try:
@@ -372,16 +373,13 @@ async def test_cli_approval_handler_does_not_block_loop(monkeypatch):
     def slow_input(prompt):
         time.sleep(0.2)
         return "y"
-    
+
     monkeypatch.setattr(builtins, "input", slow_input)
 
     # 4. Invoke the async handler
     event = _tool_event("bash", "rm -rf /")
     safety = SafetyCheckData(
-        risk_level=RiskLevel.HIGH,
-        risk_score=0.8,
-        reasons=["risky"],
-        approval_timeout_seconds=5
+        risk_level=RiskLevel.HIGH, risk_score=0.8, reasons=["risky"], approval_timeout_seconds=5
     )
 
     result = await cli_approval_handler(event, safety)
