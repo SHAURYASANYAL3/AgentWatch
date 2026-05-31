@@ -13,6 +13,7 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
+from agentwatch.core.blast_radius import BlastRadiusEstimator
 from agentwatch.core.policy_dsl import PolicyAction, PolicyEngine
 from agentwatch.core.schema import (
     AgentEvent,
@@ -295,6 +296,7 @@ class SafetyEngine:
         approval_callback: ApprovalCallback | None = None,
         auditor: ReasoningAuditor | None = None,
         policy_engine: PolicyEngine | None = None,
+        blast_radius_estimator: BlastRadiusEstimator | None = None,
     ) -> None:
         """Create a safety engine with optional policy and approval hook.
 
@@ -303,12 +305,14 @@ class SafetyEngine:
             approval_callback: Async callback for human-in-the-loop approval.
             auditor: Reasoning auditor for confidence scoring.
             policy_engine: DSL policy engine for complex rules.
+            blast_radius_estimator: Estimator for proactive impact analysis.
         """
         self._policy = policy or DEFAULT_POLICY
         self._scorer = RiskScorer(extra_patterns=self._policy.custom_patterns)
         self._approval_callback = approval_callback
         self._auditor = auditor or ReasoningAuditor()
         self._policy_engine = policy_engine or PolicyEngine()
+        self._blast_radius_estimator = blast_radius_estimator or BlastRadiusEstimator()
         self._pending_approvals: dict[str, asyncio.Future[bool]] = {}
         self._blocked_count = 0
         self._approved_count = 0
@@ -339,11 +343,65 @@ class SafetyEngine:
             explanation=audit.rationale,
         )
 
-        # 2. Run shared evaluation logic
-        safety_data, block_decision = self._evaluate_safety(event)
+        # 3. Blast radius impact analysis
+        radius = self._blast_radius_estimator.estimate(event)
+
+        # 4. Static/Pattern-based blocking (pre-DSL)
+        block_immediate = False
+        for pat in self._scorer._patterns:
+            if pat.block_by_default:
+                full_text = " ".join(filter(None, [tool_call.raw_command, tool_call.tool_name]))
+                if re.search(pat.pattern, full_text, re.IGNORECASE):
+                    block_immediate = True
+                    break
+
+        # 5. Aggregate safety data for policy evaluation
+        safety_data = SafetyCheckData(
+            risk_level=risk_level,
+            risk_score=risk_score,
+            blocked=block_immediate,
+            reasons=reasons,
+            matched_policies=policies,
+            approval_timeout_seconds=self._policy.approval_timeout_seconds,
+            blast_radius=radius.to_dict(),
+        )
         event.safety = safety_data
 
-        if block_decision:
+        # 6. DSL Policy evaluation
+        decision = self._policy_engine.evaluate(event)
+
+        # Preserve previously computed block_immediate if DSL says ALLOW
+        if decision.action == PolicyAction.BLOCK:
+            block_immediate = True
+        elif decision.action == PolicyAction.PAUSE_AND_ALERT:
+            block_immediate = True
+
+        requires_approval = decision.action == PolicyAction.REQUIRE_APPROVAL
+
+        # 7. Escalation logic (Causal Override)
+        # If blast radius is high, we force approval even if other policies didn't catch it
+        if self._blast_radius_estimator.requires_approval(radius):
+            if not requires_approval and not block_immediate:
+                requires_approval = True
+                safety_data.reasons.append(f"ESCALATED: {radius.explanation}")
+
+        # Fallback to static policy if no DSL rules matched
+        if decision.action == PolicyAction.ALLOW and not block_immediate:
+            if risk_level == RiskLevel.CRITICAL:
+                block_immediate = True
+            elif risk_level == RiskLevel.HIGH and self._policy.block_on_high:
+                block_immediate = True
+            elif risk_level == RiskLevel.HIGH and self._policy.require_approval_on_high:
+                requires_approval = True
+            elif risk_level == RiskLevel.MEDIUM and self._policy.require_approval_on_medium:
+                requires_approval = True
+
+        safety_data.blocked = block_immediate
+        safety_data.requires_approval = requires_approval and not safety_data.blocked
+        if decision.reasons:
+            safety_data.reasons.extend(decision.reasons)
+
+        if safety_data.blocked:
             event.status = ExecutionStatus.BLOCKED
             self._blocked_count += 1
             logger.warning(
