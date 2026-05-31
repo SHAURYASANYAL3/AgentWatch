@@ -1,8 +1,18 @@
 from __future__ import annotations
+
 import pytest
-from agentwatch.core.blast_radius import BlastRadiusEstimator, Reversibility
-from agentwatch.core.schema import AgentEvent, AgentFramework, EventType, ToolCallData, ExecutionStatus, RiskLevel
-from agentwatch.core.safety import SafetyEngine, SafetyPolicy
+
+from agentwatch.core.blast_radius import BlastRadiusEstimator
+from agentwatch.core.safety import SafetyEngine
+from agentwatch.core.schema import (
+    AgentEvent,
+    AgentFramework,
+    EventType,
+    ExecutionStatus,
+    RiskLevel,
+    ToolCallData,
+)
+
 
 def _tool_event(tool: str, raw: str, resources: list[str] | None = None) -> AgentEvent:
     return AgentEvent(

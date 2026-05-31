@@ -10,7 +10,6 @@ from agentwatch.core.loop_detector import LoopDetector
 from agentwatch.core.policy_dsl import PolicyAction, PolicyEngine, Rule
 from agentwatch.core.risk import score_event
 from agentwatch.core.safety import (
-    RiskPattern,
     RiskScorer,
     SafetyEngine,
     SafetyPolicy,
@@ -344,12 +343,13 @@ async def test_safety_engine_sync_check_honors_block_by_default():
 
 @pytest.mark.asyncio
 async def test_cli_approval_handler_does_not_block_loop(monkeypatch):
-    import time
-    import sys
-    import builtins
     import asyncio
-    from agentwatch.core.safety import cli_approval_handler, SafetyCheckData
-    from agentwatch.core.schema import AgentEvent, RiskLevel
+    import builtins
+    import sys
+    import time
+
+    from agentwatch.core.safety import SafetyCheckData, cli_approval_handler
+    from agentwatch.core.schema import RiskLevel
 
     # 1. Start a concurrent async task that ticks every 0.05s
     ticks = 0
