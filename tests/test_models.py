@@ -9,7 +9,7 @@ from agentwatch.core.models import EventRecord, SessionRecord, get_database_url
 
 def test_get_database_url_from_args():
     url = get_database_url(
-        host="myhost", port=1234, database="mydb", user="myuser", password="mypassword"
+        host="myhost", port=1234, database="mydb", user="myuser", password="mypassword"  # noqa: S106
     )
     assert "postgresql+asyncpg://myuser:mypassword@myhost:1234/mydb" == url
 
