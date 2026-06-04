@@ -7,16 +7,16 @@
       "contributions": 33
     },
     {
-      "login": "SHAURYASANYAL3",
-      "avatar_url": "https://github.com/SHAURYASANYAL3.png",
-      "html_url": "https://github.com/SHAURYASANYAL3",
-      "contributions": 8
-    },
-    {
       "login": "anshul23102",
       "avatar_url": "https://github.com/anshul23102.png",
       "html_url": "https://github.com/anshul23102",
-      "contributions": 7
+      "contributions": 12
+    },
+    {
+      "login": "SHAURYASANYAL3",
+      "avatar_url": "https://github.com/SHAURYASANYAL3.png",
+      "html_url": "https://github.com/SHAURYASANYAL3",
+      "contributions": 10
     },
     {
       "login": "SHUBHAM2775",
@@ -25,16 +25,22 @@
       "contributions": 6
     },
     {
+      "login": "MayurKharat0390",
+      "avatar_url": "https://github.com/MayurKharat0390.png",
+      "html_url": "https://github.com/MayurKharat0390",
+      "contributions": 5
+    },
+    {
       "login": "rishabhextra365-lang",
       "avatar_url": "https://github.com/rishabhextra365-lang.png",
       "html_url": "https://github.com/rishabhextra365-lang",
       "contributions": 5
     },
     {
-      "login": "MayurKharat0390",
-      "avatar_url": "https://github.com/MayurKharat0390.png",
-      "html_url": "https://github.com/MayurKharat0390",
-      "contributions": 4
+      "login": "harika880",
+      "avatar_url": "https://github.com/harika880.png",
+      "html_url": "https://github.com/harika880",
+      "contributions": 2
     },
     {
       "login": "aabhinavvvvvvv",
@@ -61,6 +67,12 @@
       "contributions": 1
     },
     {
+      "login": "Moresh-Mishra",
+      "avatar_url": "https://github.com/Moresh-Mishra.png",
+      "html_url": "https://github.com/Moresh-Mishra",
+      "contributions": 1
+    },
+    {
       "login": "simplyintellect",
       "avatar_url": "https://github.com/simplyintellect.png",
       "html_url": "https://github.com/simplyintellect",
@@ -73,6 +85,6 @@
       "contributions": 1
     }
   ],
-  "updated_at": "2026-06-01T16:31:04Z",
-  "total": 12
+  "updated_at": "2026-06-04T16:07:59Z",
+  "total": 14
 }
