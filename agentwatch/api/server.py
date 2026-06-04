@@ -7,6 +7,9 @@ from __future__ import annotations
 
 import logging
 import os
+import re
+import time
+from collections import defaultdict
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -17,17 +20,20 @@ from fastapi import (
     Header,
     HTTPException,
     Query,
+    Request,
     WebSocket,
     WebSocketDisconnect,
     status,
 )
+from fastapi.exception_handlers import http_exception_handler
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 
 from agentwatch.alerting.engine import AlertingConfig, AlertingEngine
 from agentwatch.core.event_bus import get_event_bus
 from agentwatch.core.models import Repository, init_db
-from agentwatch.core.safety import SafetyEngine, SafetyPolicy
+from agentwatch.core.safety import RiskScorer, SafetyEngine, SafetyPolicy
 from agentwatch.core.schema import (
     AgentEvent,
     AgentFramework,
@@ -49,6 +55,76 @@ from agentwatch.scoring.confidence import ConfidenceScorer
 from agentwatch.tracing.collector import TraceCollector
 
 logger = logging.getLogger(__name__)
+
+RATE_READ = int(os.getenv("API_RATE_LIMIT_READ", "1000"))
+RATE_WRITE = int(os.getenv("API_RATE_LIMIT_WRITE", "200"))
+RATE_WINDOW_SEC = int(os.getenv("API_RATE_LIMIT_WINDOW_SEC", "60"))
+RATE_BUCKET_TTL_SEC = int(os.getenv("API_RATE_LIMIT_BUCKET_TTL_SEC", str(RATE_WINDOW_SEC + 30)))
+
+
+class _Limiter:
+    def __init__(self) -> None:
+        self._buckets: dict[str, dict[str, float | int]] = defaultdict(
+            lambda: {"count": 0, "start": 0.0}
+        )
+        self._checks_since_prune = 0
+
+    def reset(self) -> None:
+        self._buckets.clear()
+        self._checks_since_prune = 0
+
+    def _prune_stale(self, now: float) -> None:
+        cutoff = now - RATE_BUCKET_TTL_SEC
+        for key in [k for k, b in self._buckets.items() if b["start"] < cutoff]:
+            del self._buckets[key]
+
+    def check(self, ip: str, limit: int, request: Request) -> None:
+        now = time.time()
+        self._checks_since_prune += 1
+        if self._checks_since_prune >= 64 or len(self._buckets) > 4096:
+            self._prune_stale(now)
+            self._checks_since_prune = 0
+
+        b = self._buckets[ip]
+        if now - b["start"] > RATE_WINDOW_SEC:
+            b["count"] = 0
+            b["start"] = now
+        b["count"] += 1
+        remaining = max(0, limit - b["count"])
+        request.state.rl_limit = limit
+        request.state.rl_remaining = remaining
+        if b["count"] > limit:
+            raise HTTPException(
+                status_code=429,
+                detail="rate_limit_exceeded",
+                headers={
+                    "X-RateLimit-Limit": str(limit),
+                    "X-RateLimit-Remaining": "0",
+                    "Retry-After": str(RATE_WINDOW_SEC),
+                },
+            )
+
+
+_limiter = _Limiter()
+
+
+def reset_rate_limiter_for_tests() -> None:
+    """Clear in-memory counters between tests (test-only helper)."""
+    _limiter.reset()
+
+
+def _client_ip(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    if request.client:
+        return request.client.host
+    return "unknown"
+
+
+def _rate_limit_key(request: Request, suffix: str) -> str:
+    return f"{_client_ip(request)}:{suffix}"
+
 
 _db_session_factory = None
 
@@ -233,6 +309,34 @@ class SafetyPolicyUpdate(BaseModel):
     approval_timeout_seconds: int = 120
 
 
+class SafetyCheckRequest(BaseModel):
+    command: str = Field(min_length=1)
+    tool_name: str = "bash"
+    arguments: dict[str, Any] = Field(default_factory=dict)
+    affected_resources: list[str] = Field(default_factory=list)
+
+
+class ThreatPathNode(BaseModel):
+    policy_id: str
+    reason: str
+    risk_level: str
+    block_by_default: bool
+    matched: bool
+
+
+class SafetyCheckResponse(BaseModel):
+    command: str
+    tool_name: str
+    blocked: bool
+    decision: str
+    risk_level: str
+    risk_score: float
+    reasons: list[str]
+    matched_policies: list[str]
+    requires_approval: bool
+    threat_path: list[ThreatPathNode]
+
+
 def _record_budget(event: AgentEvent) -> None:
     _cost_tracker.ingest_event(event)
 
@@ -385,6 +489,32 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+
+@app.exception_handler(HTTPException)
+async def _agentwatch_http_exception_handler(request: Request, exc: HTTPException):
+    if exc.status_code == 429 and exc.detail == "rate_limit_exceeded":
+        headers = dict(exc.headers) if exc.headers else {}
+        if hasattr(request.state, "rl_limit"):
+            headers.setdefault("X-RateLimit-Limit", str(request.state.rl_limit))
+            headers.setdefault("X-RateLimit-Remaining", str(request.state.rl_remaining))
+        return JSONResponse(
+            status_code=429,
+            content={"error": "rate_limit_exceeded"},
+            headers=headers,
+        )
+    return await http_exception_handler(request, exc)
+
+
+@app.middleware("http")
+async def rl_headers(request: Request, call_next):
+    """Add X-RateLimit-* headers to every response including 429s."""
+    response = await call_next(request)
+    if hasattr(request.state, "rl_limit"):
+        response.headers["X-RateLimit-Limit"] = str(request.state.rl_limit)
+        response.headers["X-RateLimit-Remaining"] = str(request.state.rl_remaining)
+    return response
+
+
 # CORS configuration.
 #
 # allow_credentials=True requires an explicit origin list -- the CORS spec
@@ -430,7 +560,8 @@ async def system_status(_auth: None = Depends(_require_api_key)) -> dict[str, An
 
 
 @app.get("/health")
-async def health() -> dict[str, Any]:
+async def health(request: Request) -> dict[str, Any]:
+    _limiter.check(_rate_limit_key(request, "r"), RATE_READ, request)
     return {
         "status": "ok",
         "version": "0.2.0",
@@ -445,12 +576,14 @@ async def health() -> dict[str, Any]:
 
 @app.get("/api/v1/sessions", response_model=SessionListResponse)
 async def list_sessions(
+    request: Request,
     limit: int = Query(default=50, le=200),
     framework: str | None = Query(default=None),
     status: str | None = Query(default=None),
     since_hours: int | None = Query(default=None),
     _auth: None = Depends(_require_api_key),
 ) -> SessionListResponse:
+    _limiter.check(_rate_limit_key(request, "r"), RATE_READ, request)
     since = None
     if since_hours is not None:
         since = datetime.now(UTC) - timedelta(hours=since_hours)
@@ -464,15 +597,23 @@ async def list_sessions(
 
 @app.post("/api/v1/sessions")
 async def create_session(
-    session: AgentSession, _auth: None = Depends(_require_api_key)
+    request: Request,
+    session: AgentSession,
+    _auth: None = Depends(_require_api_key),
 ) -> dict[str, Any]:
+    _limiter.check(_rate_limit_key(request, "w"), RATE_WRITE, request)
     _collector.register_session(session)
     await _pg_write_session(session)
     return {"status": "registered", "session": session.model_dump(mode="json")}
 
 
 @app.get("/api/v1/sessions/{session_id}")
-async def get_session(session_id: str, _auth: None = Depends(_require_api_key)) -> dict[str, Any]:
+async def get_session(
+    request: Request,
+    session_id: str,
+    _auth: None = Depends(_require_api_key),
+) -> dict[str, Any]:
+    _limiter.check(_rate_limit_key(request, "r"), RATE_READ, request)
     trace = _collector.get_trace(session_id)
     if not trace:
         raise HTTPException(status_code=404, detail=f"Session {session_id} not found")
@@ -481,11 +622,13 @@ async def get_session(session_id: str, _auth: None = Depends(_require_api_key)) 
 
 @app.get("/api/v1/sessions/{session_id}/events", response_model=TraceResponse)
 async def get_events(
+    request: Request,
     session_id: str,
     event_type: str | None = Query(default=None),
     limit: int = Query(default=500, le=2000),
     _auth: None = Depends(_require_api_key),
 ) -> TraceResponse:
+    _limiter.check(_rate_limit_key(request, "r"), RATE_READ, request)
     events = _collector.get_events(session_id, event_type=event_type, limit=limit)
     return TraceResponse(
         session_id=session_id,
@@ -496,8 +639,11 @@ async def get_events(
 
 @app.post("/api/v1/events")
 async def ingest_event(
-    event: AgentEvent, _auth: None = Depends(_require_api_key)
+    request: Request,
+    event: AgentEvent,
+    _auth: None = Depends(_require_api_key),
 ) -> dict[str, Any]:
+    _limiter.check(_rate_limit_key(request, "w"), RATE_WRITE, request)
     await get_event_bus().publish(event)
     return {"status": "accepted", "event_id": event.event_id}
 
@@ -663,6 +809,85 @@ async def get_blocked_events(
     }
 
 
+@app.post("/api/v1/safety/check", response_model=SafetyCheckResponse)
+async def check_safety_command(request: SafetyCheckRequest) -> SafetyCheckResponse:
+    cmd = request.command.strip()
+    if not cmd:
+        raise HTTPException(status_code=400, detail="command must not be empty")
+
+    merged_args = dict(request.arguments)
+    merged_args["command"] = cmd
+    tool_call = ToolCallData(
+        tool_name=request.tool_name,
+        raw_command=cmd,
+        arguments=merged_args,
+        affected_resources=request.affected_resources,
+    )
+
+    # Use the current policy in an isolated SafetyEngine so test invocations
+    # do not mutate global safety counters used by runtime telemetry.
+    sim_engine = SafetyEngine(policy=_safety_engine.policy)
+    event = AgentEvent(
+        session_id="safety-lab",
+        agent_id="safety-lab",
+        agent_name="Safety Lab",
+        framework=AgentFramework.CUSTOM,
+        event_type=EventType.TOOL_CALL,
+        tool_call=tool_call,
+    )
+    checked = await sim_engine.check_event(event)
+    if checked.safety is None:
+        raise HTTPException(status_code=500, detail="safety check failed")
+
+    scorer = RiskScorer(extra_patterns=_safety_engine.policy.custom_patterns)
+    full_text = " ".join(
+        [
+            tool_call.raw_command or "",
+            tool_call.tool_name,
+            *[str(v) for v in tool_call.arguments.values() if isinstance(v, str)],
+        ]
+    )
+    threat_path: list[ThreatPathNode] = []
+    for pattern in scorer._patterns:  # noqa: SLF001
+        try:
+            if pattern.use_regex:
+                matched = bool(re.search(pattern.pattern, full_text, re.IGNORECASE))
+            else:
+                matched = False
+        except re.error:
+            matched = False
+        threat_path.append(
+            ThreatPathNode(
+                policy_id=pattern.policy_id,
+                reason=pattern.reason,
+                risk_level=pattern.risk_level.value,
+                block_by_default=pattern.block_by_default,
+                matched=matched,
+            )
+        )
+
+    safety = checked.safety
+    if safety.blocked:
+        decision = "blocked"
+    elif safety.requires_approval:
+        decision = "requires_approval"
+    else:
+        decision = "allowed"
+
+    return SafetyCheckResponse(
+        command=cmd,
+        tool_name=request.tool_name,
+        blocked=safety.blocked,
+        decision=decision,
+        risk_level=safety.risk_level.value,
+        risk_score=safety.risk_score,
+        reasons=safety.reasons,
+        matched_policies=safety.matched_policies,
+        requires_approval=safety.requires_approval,
+        threat_path=threat_path,
+    )
+
+
 @app.get("/api/v1/dashboard/summary")
 async def dashboard_summary(_auth: None = Depends(_require_api_key)) -> dict[str, Any]:
     sessions = _collector.list_sessions(limit=200)
@@ -696,6 +921,37 @@ async def seed_demo(_auth: None = Depends(_require_api_key)) -> dict[str, Any]:
 
 @app.websocket("/ws/events")
 async def websocket_events(websocket: WebSocket) -> None:
+    """Real-time event stream over WebSocket.
+
+    Authentication mirrors the REST layer: clients must supply the
+    AGENTWATCH_API_KEY value either in the ``X-Api-Key`` request header or
+    as the ``api_key`` query parameter.  When the key is absent or incorrect
+    the connection is rejected with WebSocket close code 4001 before any data
+    is sent, consistent with HTTP 401 semantics.
+
+    When AGENTWATCH_API_KEY is not configured the guard follows the same
+    logic as _require_api_key: open in development, fail-closed in production.
+    """
+    # Resolve the supplied key from the header or query parameter so browser
+    # WebSocket clients (which cannot set arbitrary headers) can pass the key
+    # as a URL parameter.
+    supplied_key = websocket.headers.get("x-api-key") or websocket.query_params.get("api_key")
+
+    if _IS_PROD and not _API_KEY:
+        # Fail-closed: production deployment with no key configured is a
+        # misconfiguration; reject all connections.
+        logger.error(
+            "AGENTWATCH_API_KEY is missing in production environment; "
+            "rejecting WebSocket connection"
+        )
+        await websocket.close(code=4500, reason="Server misconfiguration")
+        return
+
+    if _API_KEY and supplied_key != _API_KEY:
+        logger.warning("WebSocket connection rejected: invalid or missing API key")
+        await websocket.close(code=4001, reason="Unauthorized")
+        return
+
     await websocket.accept()
     _ws_clients.append(websocket)
     bus = get_event_bus()
