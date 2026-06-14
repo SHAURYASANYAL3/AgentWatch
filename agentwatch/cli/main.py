@@ -25,7 +25,11 @@ console = Console()
 
 session_app = typer.Typer(name="session", help="Manage and inspect agent sessions")
 server_app = typer.Typer(name="server", help="Manage the AgentWatch API server")
-safety_app = typer.Typer(name="safety", help="Safety and risk analysis tools")
+safety_app = typer.Typer(
+    name="safety", 
+    help="AgentWatch Safety & Risk Engine. Analyze shell commands against security policies.",
+    rich_markup_mode="rich"
+)
 
 app.add_typer(session_app)
 app.add_typer(server_app)
@@ -426,7 +430,12 @@ def safety(
     command: str = typer.Argument(..., help="Command to risk-score"),
     verbose: bool = typer.Option(False, "--verbose", "-v"),
 ) -> None:
-    """[bold]Score[/bold] the risk level of a shell command."""
+    """
+    [bold]Score[/bold] the risk level of a shell command.
+    
+    [b]Example Usage:[/b]
+    [dim]python -m agentwatch.cli.main safety check "rm -rf /var/log"[/dim]
+    """
     from agentwatch.core.safety import RiskScorer
     from agentwatch.core.schema import ToolCallData
 
