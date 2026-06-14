@@ -13,5 +13,5 @@ def test_verify_env_cli():
     result = runner.invoke(app, ["check-env"])
     assert result.exit_code == 0
     assert "AgentWatch Environment Diagnostics" in result.stdout
-    assert "Python version" in result.stdout
-    assert "Dependencies Status" in result.stdout
+    assert "Python Runtime" in result.stdout
+    assert "Core Dependency" in result.stdout

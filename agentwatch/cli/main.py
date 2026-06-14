@@ -45,10 +45,18 @@ def main_callback():
         r"       /____/                                              "
     ]
     
+    # Glitchy Typing Effect
+    import sys
     for line in ascii_art:
-        console.print(f"[bold cyan]{line}[/bold cyan]")
-        time.sleep(0.04)
-    console.print()
+        sys.stdout.write("\r\033[K") # Clear line
+        text = ""
+        for char in line:
+            text += char
+            sys.stdout.write(f"\r\033[96m{text}\033[0m")
+            sys.stdout.flush()
+            time.sleep(0.002)
+        print()
+    console.print("[dim italic]Initializing runtime components...[/dim italic]\n")
 
 
 
