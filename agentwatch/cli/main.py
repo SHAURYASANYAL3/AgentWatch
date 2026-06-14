@@ -31,6 +31,27 @@ app.add_typer(session_app)
 app.add_typer(server_app)
 app.add_typer(safety_app)
 
+import time
+
+@app.callback()
+def main_callback():
+    """AgentWatch CLI with ASCII Animation"""
+    ascii_art = [
+        r"    ___                    __ _       __      __       __  ",
+        r"   /   |  ____  ___  ____ / /| |     / /___ _/ /______/ /_ ",
+        r"  / /| | / __ `/ _ \/ __ \ __/ | /| / / __ `/ __/ ___/ __ \\",
+        r" / ___ |/ /_/ /  __/ / / / /_  |/ |/ / /_/ / /_/ /__/ / / /",
+        r"/_/  |_|\__, /\___/_/ /_/\__/  |__/|__/\__,_/\__/\___/_/ /_/",
+        r"       /____/                                              "
+    ]
+    
+    for line in ascii_art:
+        console.print(f"[bold cyan]{line}[/bold cyan]")
+        time.sleep(0.04)
+    console.print()
+
+
+
 
 # ─────────────────────────────────────────────
 # Helpers
@@ -296,8 +317,9 @@ def sessions(
 
         async with httpx.AsyncClient() as client:
             try:
-                resp = await client.get(
-                    f"{api_url}/api/v1/sessions",
+                with console.status("[cyan]Fetching sessions...[/cyan]", spinner="bouncingBar"):
+                    resp = await client.get(
+                        f"{api_url}/api/v1/sessions",
                     params={"limit": limit, "framework": framework},
                     timeout=10.0,
                 )
