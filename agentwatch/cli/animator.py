@@ -1,14 +1,15 @@
+import os
+import random
+import subprocess
 import sys
 import time
-import random
-import os
-import subprocess
-from typing import List, Any
+from typing import Any
+
+from rich.align import Align
 from rich.console import Console
-from rich.table import Table
 from rich.live import Live
 from rich.panel import Panel
-from rich.align import Align
+from rich.table import Table
 
 console = Console()
 
@@ -25,14 +26,14 @@ def speak_welcome() -> None:
         cmd = f"Add-Type -AssemblyName System.speech; $synth = New-Object System.Speech.Synthesis.SpeechSynthesizer; $synth.Rate = 1; $synth.Speak('Welcome {user}, to Agent Watch.')"
         # Run in background so it talks while animating
         # Prevent window flashing which steals focus
-        subprocess.Popen(
-            ["powershell", "-WindowStyle", "Hidden", "-Command", cmd], 
+        subprocess.Popen(  # nosec # noqa: S603, S607
+            ["powershell", "-WindowStyle", "Hidden", "-Command", cmd],  # noqa: S607
             stdout=subprocess.DEVNULL, 
             stderr=subprocess.DEVNULL,
             creationflags=subprocess.CREATE_NO_WINDOW
         )
 
-def cinematic_logo_reveal(ascii_art: List[str]) -> None:
+def cinematic_logo_reveal(ascii_art: list[str]) -> None:
     """A highly animated movie-style reveal for the ASCII logo."""
     # Start talking!
     speak_welcome()
@@ -51,7 +52,7 @@ def cinematic_logo_reveal(ascii_art: List[str]) -> None:
             # The leading edge has intense matrix characters
             edge = ""
             if reveal_len < len(line):
-                edge = f"\033[92m{random.choice(CHARS)}\033[0m"
+                edge = f"\033[92m{random.choice(CHARS)}\033[0m"  # nosec # noqa: S311
                 
             sys.stdout.write(f"\r\033[K\033[96m{visible}\033[0m{edge}\n")
         sys.stdout.flush()
@@ -73,7 +74,7 @@ def matrix_type_print(text: str, color: str = "96m", delay: float = 0.01) -> Non
     for char in text:
         if char.strip():
             # Show random character briefly
-            sys.stdout.write(f"\r\033[{color}{current_text}\033[0m\033[92m{random.choice(CHARS)}\033[0m")
+            sys.stdout.write(f"\r\033[{color}{current_text}\033[0m\033[92m{random.choice(CHARS)}\033[0m")  # nosec # noqa: S311
             sys.stdout.flush()
             time.sleep(0.005)
         current_text += char
@@ -82,7 +83,7 @@ def matrix_type_print(text: str, color: str = "96m", delay: float = 0.01) -> Non
         time.sleep(delay)
     print()
 
-def animate_table_rows(table: Table, rows: List[List[Any]], delay: float = 0.05) -> None:
+def animate_table_rows(table: Table, rows: list[list[Any]], delay: float = 0.05) -> None:
     """Animate adding rows to a rich Table."""
     with Live(table, console=console, refresh_per_second=20) as live:
         for row in rows:
@@ -90,7 +91,7 @@ def animate_table_rows(table: Table, rows: List[List[Any]], delay: float = 0.05)
             table.add_row(*row)
             live.update(table)
 
-def glitch_ascii_art(ascii_art: List[str]) -> None:
+def glitch_ascii_art(ascii_art: list[str]) -> None:
     """Legacy glitch function, kept for backward compat."""
     cinematic_logo_reveal(ascii_art)
 

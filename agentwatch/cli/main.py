@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 from pathlib import Path
 
 import typer
@@ -36,7 +37,6 @@ app.add_typer(session_app)
 app.add_typer(server_app)
 app.add_typer(safety_app)
 
-import time
 
 @app.callback(invoke_without_command=True)
 def main_callback(ctx: typer.Context):
@@ -50,7 +50,11 @@ def main_callback(ctx: typer.Context):
         r"       /____/                                              "
     ]
     
-    from agentwatch.cli.animator import cinematic_logo_reveal, matrix_type_print, print_systematic_menu
+    from agentwatch.cli.animator import (
+        cinematic_logo_reveal,
+        matrix_type_print,
+        print_systematic_menu,
+    )
     cinematic_logo_reveal(ascii_art)
     
     matrix_type_print("Initializing runtime components...", color="90;3m", delay=0.01)
@@ -437,14 +441,12 @@ def safety(
     [b]Example Usage:[/b]
     [dim]python -m agentwatch.cli.main safety check "rm -rf /var/log"[/dim]
     """
+    from rich.panel import Panel
+    from rich.progress import Progress, SpinnerColumn, TextColumn
+
+    from agentwatch.cli.animator import matrix_type_print
     from agentwatch.core.safety import RiskScorer
     from agentwatch.core.schema import ToolCallData
-    from agentwatch.cli.animator import matrix_type_print
-    import time
-    from rich.progress import Progress, SpinnerColumn, TextColumn
-    from rich.panel import Panel
-    from rich.console import Group
-    from rich.text import Text
 
     scorer = RiskScorer()
     tool = ToolCallData(tool_name="bash", raw_command=command, arguments={"command": command})
@@ -580,9 +582,9 @@ def status(
     async def _run() -> None:
         try:
             import httpx
-            from rich.live import Live
-            from rich.layout import Layout
             from rich.align import Align
+            from rich.layout import Layout
+            from rich.live import Live
         except ImportError:
             console.print("[red]Missing dependencies. Run: pip install httpx rich[/red]")
             raise typer.Exit(1)
@@ -750,8 +752,8 @@ def _print_replay_step(step, show_all: bool = False) -> None:
 
 
 def _print_session_summary(session, events) -> None:
-    from agentwatch.scoring.confidence import ConfidenceScorer
     from agentwatch.cli.animator import matrix_type_print
+    from agentwatch.scoring.confidence import ConfidenceScorer
 
     scorer = ConfidenceScorer()
     result = scorer.score(events, goal=session.goal)
@@ -786,8 +788,9 @@ def _print_session_summary(session, events) -> None:
 
 
 def _print_sessions_table(sessions: list) -> None:
-    from agentwatch.cli.animator import animate_table_rows
     from rich import box
+
+    from agentwatch.cli.animator import animate_table_rows
     
     table = Table(title="[bold green]R E C E N T   S E S S I O N S[/bold green]", box=box.DOUBLE_EDGE, border_style="bold cyan")
     table.add_column("ID", style="bold green", width=16)
