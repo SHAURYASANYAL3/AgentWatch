@@ -45,18 +45,11 @@ def main_callback(ctx: typer.Context):
         r"       /____/                                              "
     ]
     
-    # Glitchy Typing Effect
-    import sys
-    for line in ascii_art:
-        sys.stdout.write("\r\033[K") # Clear line
-        text = ""
-        for char in line:
-            text += char
-            sys.stdout.write(f"\r\033[96m{text}\033[0m")
-            sys.stdout.flush()
-            time.sleep(0.002)
-        print()
-    console.print("[dim italic]Initializing runtime components...[/dim italic]\n")
+    from agentwatch.cli.animator import glitch_ascii_art, matrix_type_print
+    glitch_ascii_art(ascii_art)
+    
+    matrix_type_print("Initializing runtime components...", color="90m;3m", delay=0.01)
+    print()
 
     if ctx.invoked_subcommand is None:
         console.print(ctx.get_help())
@@ -701,6 +694,7 @@ def _print_replay_step(step, show_all: bool = False) -> None:
 
 def _print_session_summary(session, events) -> None:
     from agentwatch.scoring.confidence import ConfidenceScorer
+    from agentwatch.cli.animator import matrix_type_print
 
     scorer = ConfidenceScorer()
     result = scorer.score(events, goal=session.goal)
@@ -713,10 +707,11 @@ def _print_session_summary(session, events) -> None:
         if result.overall_score >= 0.4
         else "red"
     )
+    
+    matrix_type_print(f"SESSION COMPLETE: {session.session_id}", color="1;96m", delay=0.03)
 
     console.print(
         Panel(
-            f"[bold]Session Complete[/bold]\n"
             f"Status:     [{sc}]{session.status.value}[/{sc}]\n"
             f"Events:     {session.total_events}\n"
             f"Tokens:     {session.total_tokens:,}\n"
@@ -734,6 +729,7 @@ def _print_session_summary(session, events) -> None:
 
 
 def _print_sessions_table(sessions: list) -> None:
+    from agentwatch.cli.animator import animate_table_rows
     table = Table(title="Recent Sessions", box=box.ROUNDED)
     table.add_column("ID", style="dim", width=16)
     table.add_column("Agent")
@@ -743,11 +739,12 @@ def _print_sessions_table(sessions: list) -> None:
     table.add_column("Tokens", justify="right")
     table.add_column("Started")
 
+    rows = []
     for s in sessions:
         sid = s["session_id"][:12] + "..."
         sc = _status_color(s.get("status", ""))
         started = s.get("started_at", "")[:16] if s.get("started_at") else "-"
-        table.add_row(
+        rows.append([
             sid,
             s.get("agent_name") or s.get("agent_id", "?")[:16],
             s.get("framework", "-"),
@@ -755,9 +752,9 @@ def _print_sessions_table(sessions: list) -> None:
             str(s.get("total_events", 0)),
             f"{s.get('total_tokens', 0):,}",
             started,
-        )
+        ])
 
-    console.print(table)
+    animate_table_rows(table, rows, delay=0.08)
 
 
 # ─────────────────────────────────────────────

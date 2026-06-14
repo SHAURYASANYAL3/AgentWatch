@@ -10,6 +10,8 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskPr
 from rich.panel import Panel
 from rich.align import Align
 
+from agentwatch.cli.animator import animate_table_rows
+
 console = Console()
 
 def verify_environment() -> None:
@@ -36,12 +38,12 @@ def verify_environment() -> None:
             
         t3 = progress.add_task("[magenta]Validating Neural Dependencies...", total=100)
         for i in range(100):
-            time.sleep(0.01)
+            time.sleep(0.008)
             progress.update(t3, advance=1)
             
         t4 = progress.add_task("[green]Scanning System Environment...", total=100)
         for i in range(100):
-            time.sleep(0.008)
+            time.sleep(0.006)
             progress.update(t4, advance=1)
 
     console.print()
@@ -72,14 +74,15 @@ def verify_environment() -> None:
     table.add_column("Core Dependency")
     table.add_column("Status", justify="right")
 
+    rows = []
     for pkg, name in deps.items():
         try:
             __import__(pkg)
-            table.add_row(name, "[green]✔️ Installed[/green]")
+            rows.append([name, "[green]✔️ Installed[/green]"])
         except ImportError:
-            table.add_row(name, "[red]❌ Missing[/red]")
+            rows.append([name, "[red]❌ Missing[/red]"])
             
-    console.print(table)
+    animate_table_rows(table, rows, delay=0.08)
     console.print()
 
     # 3. Environment Variables
@@ -97,16 +100,19 @@ def verify_environment() -> None:
     var_table.add_column("Requirement")
     var_table.add_column("Current State", justify="right")
 
+    var_rows = []
     for var, required in env_vars:
         val = os.environ.get(var)
         if val:
             display_val = val if var in ("ENVIRONMENT",) else f"{val[:6]}... (masked)"
-            var_table.add_row(var, "[dim]Required[/dim]" if required else "[dim]Optional[/dim]", f"[green]✔️ {display_val}[/green]")
+            var_rows.append([var, "[dim]Required[/dim]" if required else "[dim]Optional[/dim]", f"[green]✔️ {display_val}[/green]"])
         else:
             state = "[red]Required[/red]" if required else "[yellow]Optional[/yellow]"
-            var_table.add_row(var, state, "[dim]Not Set[/dim]")
+            var_rows.append([var, state, "[dim]Not Set[/dim]"])
 
-    console.print(var_table)
+    animate_table_rows(var_table, var_rows, delay=0.1)
     console.print()
-    console.print(Align.center("[bold cyan]ALL SYSTEMS GO.[/bold cyan]"))
+    
+    from agentwatch.cli.animator import matrix_type_print
+    matrix_type_print("  ALL SYSTEMS GO.  ", color="1;92m", delay=0.05)
     console.print()
