@@ -613,20 +613,20 @@ def _print_live_event(event) -> None:
     from agentwatch.core.schema import EventType
 
     icon_map = {
-        EventType.TOOL_CALL: "🔧",
-        EventType.TOOL_RESULT: "✅",
-        EventType.TOOL_ERROR: "❌",
-        EventType.SAFETY_BLOCK: "🚫",
-        EventType.SAFETY_CHECK: "🛡",
-        EventType.PLANNER_OUTPUT: "🧠",
-        EventType.AGENT_START: "▶",
-        EventType.AGENT_END: "⏹",
-        EventType.SESSION_START: "🚀",
-        EventType.SESSION_END: "🏁",
-        EventType.CHECKPOINT_CREATE: "📍",
-        EventType.ROLLBACK_TRIGGER: "↩",
-        EventType.MEMORY_READ: "📖",
-        EventType.MEMORY_WRITE: "✏️",
+        EventType.TOOL_CALL: "[cyan][+][/cyan]",
+        EventType.TOOL_RESULT: "[green][=][/green]",
+        EventType.TOOL_ERROR: "[red][!][/red]",
+        EventType.SAFETY_BLOCK: "[bold red][x][/bold red]",
+        EventType.SAFETY_CHECK: "[yellow][*][/yellow]",
+        EventType.PLANNER_OUTPUT: "[magenta][~][/magenta]",
+        EventType.AGENT_START: "[green][>][/green]",
+        EventType.AGENT_END: "[dim][<][/dim]",
+        EventType.SESSION_START: "[bold cyan][^][/bold cyan]",
+        EventType.SESSION_END: "[bold cyan][$][/bold cyan]",
+        EventType.CHECKPOINT_CREATE: "[blue][@][/blue]",
+        EventType.ROLLBACK_TRIGGER: "[orange1][&][/orange1]",
+        EventType.MEMORY_READ: "[dim][r][/dim]",
+        EventType.MEMORY_WRITE: "[dim][w][/dim]",
     }
 
     icon = icon_map.get(event.event_type, "•")
@@ -729,14 +729,16 @@ def _print_session_summary(session, events) -> None:
 
 def _print_sessions_table(sessions: list) -> None:
     from agentwatch.cli.animator import animate_table_rows
-    table = Table(title="Recent Sessions", box=box.ROUNDED)
-    table.add_column("ID", style="dim", width=16)
-    table.add_column("Agent")
-    table.add_column("Framework")
+    from rich import box
+    
+    table = Table(title="[bold green]R E C E N T   S E S S I O N S[/bold green]", box=box.DOUBLE_EDGE, border_style="bold cyan")
+    table.add_column("ID", style="bold green", width=16)
+    table.add_column("Agent", style="bold cyan")
+    table.add_column("Framework", style="dim white")
     table.add_column("Status")
-    table.add_column("Events", justify="right")
-    table.add_column("Tokens", justify="right")
-    table.add_column("Started")
+    table.add_column("Events", justify="right", style="cyan")
+    table.add_column("Tokens", justify="right", style="green")
+    table.add_column("Started", style="dim")
 
     rows = []
     for s in sessions:
