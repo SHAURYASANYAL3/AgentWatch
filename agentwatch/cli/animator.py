@@ -24,7 +24,13 @@ def speak_welcome() -> None:
     if sys.platform == "win32":
         cmd = f"Add-Type -AssemblyName System.speech; $synth = New-Object System.Speech.Synthesis.SpeechSynthesizer; $synth.Rate = 1; $synth.Speak('Welcome {user}, to Agent Watch.')"
         # Run in background so it talks while animating
-        subprocess.Popen(["powershell", "-WindowStyle", "Hidden", "-Command", cmd], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # Prevent window flashing which steals focus
+        subprocess.Popen(
+            ["powershell", "-WindowStyle", "Hidden", "-Command", cmd], 
+            stdout=subprocess.DEVNULL, 
+            stderr=subprocess.DEVNULL,
+            creationflags=subprocess.CREATE_NO_WINDOW
+        )
 
 def cinematic_logo_reveal(ascii_art: List[str]) -> None:
     """A highly animated movie-style reveal for the ASCII logo."""
