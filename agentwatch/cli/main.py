@@ -45,14 +45,13 @@ def main_callback(ctx: typer.Context):
         r"       /____/                                              "
     ]
     
-    from agentwatch.cli.animator import glitch_ascii_art, matrix_type_print
-    glitch_ascii_art(ascii_art)
+    from agentwatch.cli.animator import cinematic_logo_reveal, matrix_type_print, print_systematic_menu
+    cinematic_logo_reveal(ascii_art)
     
     matrix_type_print("Initializing runtime components...", color="90;3m", delay=0.01)
-    print()
 
     if ctx.invoked_subcommand is None:
-        console.print(ctx.get_help())
+        print_systematic_menu()
 
 
 
