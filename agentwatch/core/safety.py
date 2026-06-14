@@ -905,7 +905,7 @@ async def cli_approval_handler(event: AgentEvent, safety: SafetyCheckData) -> bo
     response = response.strip().lower()
     return response in ("y", "yes")
 
+
 # FEATURE IMPLEMENTATION FOR PR 235
 def feature_placeholder_235():
     pass
-
