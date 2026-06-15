@@ -14,9 +14,10 @@ from agentwatch.cli.animator import animate_table_rows
 
 console = Console()
 
+
 def verify_environment() -> None:
     console.print()
-    
+
     # Awesome Progress Bar Sequence
     with Progress(
         SpinnerColumn(spinner_name="aesthetic", style="bold cyan"),
@@ -25,38 +26,46 @@ def verify_environment() -> None:
         TaskProgressColumn(),
         console=console,
     ) as progress:
-        
         t1 = progress.add_task("[cyan]Initializing Diagnostic Matrix...", total=100)
         for i in range(100):
             time.sleep(0.005)
             progress.update(t1, advance=1)
-            
+
         t2 = progress.add_task("[yellow]Analyzing Python Subsystems...", total=100)
         for i in range(100):
             time.sleep(0.002)
             progress.update(t2, advance=1)
-            
+
         t3 = progress.add_task("[magenta]Validating Neural Dependencies...", total=100)
         for i in range(100):
             time.sleep(0.008)
             progress.update(t3, advance=1)
-            
+
         t4 = progress.add_task("[green]Scanning System Environment...", total=100)
         for i in range(100):
             time.sleep(0.006)
             progress.update(t4, advance=1)
 
     console.print()
-    console.print(Panel(Align.center("[bold cyan]AgentWatch Environment Diagnostics[/bold cyan]"), border_style="cyan"))
+    console.print(
+        Panel(
+            Align.center("[bold cyan]AgentWatch Environment Diagnostics[/bold cyan]"),
+            border_style="cyan",
+        )
+    )
 
     # 1. Python version check
     py_ver = sys.version_info
     py_ver_str = f"{py_ver.major}.{py_ver.minor}.{py_ver.micro}"
     if py_ver.major == 3 and py_ver.minor >= 12:
-        console.print(f"  [green]✔️ [/green] [bold]Python Runtime:[/bold] {py_ver_str} [dim](compatible)[/dim]")
+        console.print(
+            f"  [green]✔️ [/green] [bold]Python Runtime:[/bold] {py_ver_str} [dim](compatible)[/dim]"
+        )
     else:
-        console.print(f"  [red]❌ [/red] [bold]Python Runtime:[/bold] {py_ver_str} [red](requires >= 3.12)[/red]")
-        
+        console.print(
+            f"  [red]❌ [/red] [bold]Python Runtime:[/bold] {py_ver_str} [red](requires >= 3.12)[/red]"
+        )
+
     console.print()
 
     # 2. Dependency checks
@@ -81,7 +90,7 @@ def verify_environment() -> None:
             rows.append([name, "[green]✔️ Installed[/green]"])
         except ImportError:
             rows.append([name, "[red]❌ Missing[/red]"])
-            
+
     animate_table_rows(table, rows, delay=0.08)
     console.print()
 
@@ -105,14 +114,21 @@ def verify_environment() -> None:
         val = os.environ.get(var)
         if val:
             display_val = val if var in ("ENVIRONMENT",) else f"{val[:6]}... (masked)"
-            var_rows.append([var, "[dim]Required[/dim]" if required else "[dim]Optional[/dim]", f"[green]✔️ {display_val}[/green]"])
+            var_rows.append(
+                [
+                    var,
+                    "[dim]Required[/dim]" if required else "[dim]Optional[/dim]",
+                    f"[green]✔️ {display_val}[/green]",
+                ]
+            )
         else:
             state = "[red]Required[/red]" if required else "[yellow]Optional[/yellow]"
             var_rows.append([var, state, "[dim]Not Set[/dim]"])
 
     animate_table_rows(var_table, var_rows, delay=0.1)
     console.print()
-    
+
     from agentwatch.cli.animator import matrix_type_print
+
     matrix_type_print("  ALL SYSTEMS GO.  ", color="1;92m", delay=0.05)
     console.print()
