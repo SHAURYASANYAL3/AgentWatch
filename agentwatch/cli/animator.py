@@ -1,6 +1,6 @@
 import os
 import random
-import subprocess
+import subprocess  # nosec
 import sys
 import time
 from typing import Any
