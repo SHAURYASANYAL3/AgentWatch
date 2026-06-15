@@ -711,6 +711,248 @@ def status(
     except KeyboardInterrupt:
         console.print("[dim]Exited status dashboard.[/dim]")
 
+# ─────────────────────────────────────────────
+# compare command
+# ─────────────────────────────────────────────
+
+
+@app.command()
+def compare(
+    session_id_1: str = typer.Argument(..., help="ID of the first session to compare"),
+    session_id_2: str = typer.Argument(..., help="ID of the second session to compare"),
+    api_url: str = typer.Option("http://localhost:8000", "--api"),
+) -> None:
+    """[bold]Compare[/bold] confidence and quality metrics across two sessions."""
+
+    async def _run() -> None:
+        try:
+            import httpx
+        except ImportError:
+            console.print("[red]httpx not installed. Run: pip install httpx[/red]")
+            raise typer.Exit(1)
+
+        async with httpx.AsyncClient() as client:
+            try:
+                conf1_resp = await client.get(
+                    f"{api_url}/api/v1/sessions/{session_id_1}/confidence", timeout=10.0
+                )
+                conf2_resp = await client.get(
+                    f"{api_url}/api/v1/sessions/{session_id_2}/confidence", timeout=10.0
+                )
+
+                if conf1_resp.status_code == 404:
+                    console.print(
+                        f"[red]Session {session_id_1} not found or has no confidence data.[/red]"
+                    )
+                    raise typer.Exit(1)
+                if conf2_resp.status_code == 404:
+                    console.print(
+                        f"[red]Session {session_id_2} not found or has no confidence data.[/red]"
+                    )
+                    raise typer.Exit(1)
+
+                conf1_resp.raise_for_status()
+                conf2_resp.raise_for_status()
+
+                conf1 = conf1_resp.json()
+                conf2 = conf2_resp.json()
+
+                rep1_resp = await client.get(
+                    f"{api_url}/api/v1/sessions/{session_id_1}/replay", timeout=10.0
+                )
+                rep2_resp = await client.get(
+                    f"{api_url}/api/v1/sessions/{session_id_2}/replay", timeout=10.0
+                )
+
+                if rep1_resp.status_code == 404:
+                    console.print(f"[red]Session {session_id_1} replay not found.[/red]")
+                    raise typer.Exit(1)
+                if rep2_resp.status_code == 404:
+                    console.print(f"[red]Session {session_id_2} replay not found.[/red]")
+                    raise typer.Exit(1)
+
+                rep1_resp.raise_for_status()
+                rep2_resp.raise_for_status()
+
+                rep1 = rep1_resp.json()
+                rep2 = rep2_resp.json()
+
+            except httpx.HTTPStatusError as exc:
+                console.print(
+                    f"[red]API request failed with status {exc.response.status_code}: {exc.response.text}[/red]"
+                )
+                raise typer.Exit(1)
+            except httpx.HTTPError as exc:
+                console.print(f"[red]Failed to connect to API at {api_url}: {exc}[/red]")
+                raise typer.Exit(1)
+
+        def _compute_metrics(conf, rep):
+            """
+            Compute comparison metrics from API responses.
+
+            Required confidence fields:
+            - overall_score
+
+            Optional fields:
+            - goal_alignment
+            - hallucination_risk
+            - anomaly_flags
+
+            Missing optional fields are rendered as N/A to maintain
+            compatibility with older AgentWatch API versions.
+            """
+            overall = conf.get("overall_score")
+            alignment = conf.get("goal_alignment")
+
+            steps = rep.get("steps", [])
+            failed_steps = 0
+            safety_blocks = 0
+
+            from pydantic import ValidationError
+
+            from agentwatch.core.schema import AgentEvent
+            from agentwatch.reasoning.hallucination import (
+                HallucinationClassifier,
+                HallucinationRisk,
+            )
+
+            # Preferred: if confidence_response has hallucination_risk, use it.
+            # Otherwise, derive it from official HallucinationClassifier.
+            hrisk = conf.get("hallucination_risk")
+            compute_hrisk = hrisk is None
+
+            if compute_hrisk:
+                classifier = HallucinationClassifier()
+                highest_risk = HallucinationRisk.LOW
+
+            for step in steps:
+                ev_data = step.get("event", {})
+
+                # Check for failures and safety blocks
+                etype = ev_data.get("event_type", "").lower()
+                status = ev_data.get("status", "").lower()
+                if etype == "tool_error" or status == "failure":
+                    failed_steps += 1
+
+                safety = ev_data.get("safety")
+                if etype == "safety_block" or (safety and safety.get("blocked")):
+                    safety_blocks += 1
+
+                # Classify hallucination risk using the official source of truth
+                if compute_hrisk:
+                    try:
+                        ev = AgentEvent(**ev_data)
+                        classifier.observe(ev)
+                        f = classifier.classify(ev)
+                        if f.risk == HallucinationRisk.HIGH:
+                            highest_risk = HallucinationRisk.HIGH
+                        elif (
+                            f.risk == HallucinationRisk.MEDIUM
+                            and highest_risk == HallucinationRisk.LOW
+                        ):
+                            highest_risk = HallucinationRisk.MEDIUM
+                    except (ValidationError, TypeError, ValueError):
+                        continue
+
+            if compute_hrisk:
+                hrisk = highest_risk.value.upper()
+
+            return {
+                "overall": overall,
+                "hrisk": hrisk,
+                "alignment": alignment,
+                "failed": failed_steps,
+                "blocks": safety_blocks,
+            }
+
+        m1 = _compute_metrics(conf1, rep1)
+        m2 = _compute_metrics(conf2, rep2)
+
+        def format_score(val):
+            return f"{val:.2f}" if val is not None else "N/A"
+
+        console.print("\n[bold]AgentWatch Session Comparison[/bold]")
+        console.print("────────────────────────────────────\n")
+
+        table = Table(box=None, show_header=True, header_style="")
+        table.add_column("", style="bold", width=20)
+        table.add_column("Session A", justify="center", width=12)
+        table.add_column("Session B", justify="center", width=12)
+
+        table.add_row(
+            "Overall Confidence", format_score(m1["overall"]), format_score(m2["overall"])
+        )
+        table.add_row("Hallucination Risk", m1["hrisk"], m2["hrisk"])
+        table.add_row(
+            "Goal Alignment", format_score(m1["alignment"]), format_score(m2["alignment"])
+        )
+        table.add_row("Failed Steps", str(m1["failed"]), str(m2["failed"]))
+        table.add_row("Safety Blocks", str(m1["blocks"]), str(m2["blocks"]))
+
+        console.print(table)
+        console.print("\n[bold]Improvement Summary[/bold]")
+        console.print("────────────────────────────────────")
+
+        if m1["overall"] is not None and m2["overall"] is not None:
+            diff = m2["overall"] - m1["overall"]
+            if diff > 0:
+                if m1["overall"] > 0:
+                    pct = diff / m1["overall"] * 100
+                    conf_sum = f"[green]+{pct:.0f}%[/green]"
+                else:
+                    conf_sum = "N/A"
+            elif diff < 0:
+                if m1["overall"] > 0:
+                    pct = -diff / m1["overall"] * 100
+                    conf_sum = f"[red]-{pct:.0f}%[/red]"
+                else:
+                    conf_sum = "N/A"
+            else:
+                conf_sum = "Unchanged"
+                conf_sum = "Unchanged"
+        else:
+            conf_sum = "N/A"
+
+        console.print(f"Confidence Increase: {conf_sum}")
+
+        if m1["hrisk"] == "HIGH" and m2["hrisk"] == "LOW":
+            hr_sum = "[green]Improved[/green]"
+        elif m1["hrisk"] == "LOW" and m2["hrisk"] == "HIGH":
+            hr_sum = "[red]Regressed[/red]"
+        elif m1["hrisk"] == "N/A" or m2["hrisk"] == "N/A":
+            hr_sum = "N/A"
+        else:
+            hr_sum = "Unchanged"
+        console.print(f"Hallucination Risk: {hr_sum}")
+
+        if m1["alignment"] is not None and m2["alignment"] is not None:
+            diff_align = m2["alignment"] - m1["alignment"]
+            if diff_align > 0:
+                al_sum = "[green]Improved[/green]"
+            elif diff_align < 0:
+                al_sum = "[red]Regressed[/red]"
+            else:
+                al_sum = "Unchanged"
+        else:
+            al_sum = "N/A"
+        console.print(f"Goal Alignment: {al_sum}")
+
+        console.print("\nHigher confidence session: ", end="")
+        if m1["overall"] is not None and m2["overall"] is not None:
+            if m2["overall"] > m1["overall"]:
+                console.print("[bold green]Session B[/bold green]")
+            elif m1["overall"] > m2["overall"]:
+                console.print("[bold green]Session A[/bold green]")
+            else:
+                console.print("[bold yellow]Tie[/bold yellow]")
+        else:
+            console.print("N/A")
+        console.print()
+
+    asyncio.run(_run())
+
+
+# ─────────────────────────────────────────────
 # verify-env command
 # ---------------------------------------------
 
