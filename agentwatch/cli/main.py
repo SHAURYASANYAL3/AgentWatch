@@ -23,6 +23,9 @@ app = typer.Typer(
     add_completion=True,
     rich_markup_mode="rich",
 )
+session_app = typer.Typer(name="session", help="Manage AgentWatch sessions.")
+app.add_typer(session_app)
+
 console = Console()
 
 session_app = typer.Typer(
@@ -1148,21 +1151,67 @@ def _print_sessions_table(sessions: list) -> None:
     animate_table_rows(table, rows, delay=0.08)
 
 
-class ExportFormat(str, Enum):
-    json = "json"
-    md = "md"
+# ─────────────────────────────────────────────
+# session prune command
+# ─────────────────────────────────────────────
 
 
-@app.command()
-def export(
-    session_id: str = typer.Argument(..., help="ID of the session to export"),
-    format: ExportFormat = typer.Option(
-        ExportFormat.json, "--format", help="Export format: json or md"
+def _parse_older_than_to_hours(val: str) -> int:
+    import math
+
+    val = val.strip().lower()
+    if not val:
+        raise typer.BadParameter("Empty duration")
+
+    if val.endswith("d"):
+        num = val[:-1]
+        try:
+            days = float(num)
+            if days <= 0:
+                raise ValueError()
+            hours = math.ceil(days * 24)
+            if hours < 1:
+                raise ValueError()
+            return hours
+        except ValueError:
+            raise typer.BadParameter(
+                f"Invalid format '{val}'. Expected positive number followed by 'd' (e.g. 30d)"
+            )
+
+    elif val.endswith("h"):
+        num = val[:-1]
+        try:
+            hours = float(num)
+            if hours <= 0:
+                raise ValueError()
+            hours_i = math.ceil(hours)
+            if hours_i < 1:
+                raise ValueError()
+            return hours_i
+        except ValueError:
+            raise typer.BadParameter(
+                f"Invalid format '{val}'. Expected positive number followed by 'h' (e.g. 12h)"
+            )
+
+    else:
+        raise typer.BadParameter(
+            f"Invalid duration format '{val}'. Must end with 'd' for days or 'h' for hours (e.g. 30d, 12h)"
+        )
+
+
+@session_app.command("prune")
+def session_prune(
+    older_than: str = typer.Option(
+        ..., "--older-than", help="Age of sessions to prune (e.g. 30d, 12h)"
     ),
-    output: Path | None = typer.Option(None, "--output", "-o", help="Custom output file path"),
     api_url: str = typer.Option("http://localhost:8000", "--api"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Preview what would be deleted without taking action"
+    ),
 ) -> None:
-    """[bold]Export[/bold] a session replay to a portable JSON or Markdown file."""
+    """[bold]Prune[/bold] old sessions, traces, and checkpoints to free up disk space."""
+
+    hours = _parse_older_than_to_hours(older_than)
 
     async def _run() -> None:
         try:
@@ -1171,140 +1220,63 @@ def export(
             console.print("[red]httpx not installed. Run: pip install httpx[/red]")
             raise typer.Exit(1)
 
+        console.print(
+            Panel(
+                f"[bold cyan]Session Prune[/bold cyan]\n"
+                f"[dim]Threshold:[/dim] older than {older_than}\n"
+                f"[dim]Dry-run:[/dim]   {'Yes' if dry_run else 'No'}",
+                border_style="cyan",
+            )
+        )
+
         async with httpx.AsyncClient() as client:
             try:
-                resp = await client.get(
-                    f"{api_url}/api/v1/sessions/{session_id}/replay",
-                    timeout=10.0,
+                resp = await client.request(
+                    "DELETE",
+                    f"{api_url}/api/v1/sessions/prune",
+                    params={"older_than_hours": hours, "dry_run": dry_run},
+                    timeout=30.0,
                 )
-                if resp.status_code == 404:
-                    console.print(f"[red]Session {session_id} not found.[/red]")
-                    raise typer.Exit(1)
                 resp.raise_for_status()
-            except httpx.HTTPError as exc:
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code == 401:
+                    console.print(
+                        f"[red]Authentication failed. Check your API key or permissions for {api_url}[/red]"
+                    )
+                else:
+                    console.print(
+                        f"[red]API request failed with status {exc.response.status_code}: {exc.response.text}[/red]"
+                    )
+                raise typer.Exit(1)
+            except Exception as exc:
                 console.print(f"[red]Failed to connect to API at {api_url}: {exc}[/red]")
                 raise typer.Exit(1)
 
         data = resp.json()
 
-        if format == ExportFormat.json:
-            out_path = output or Path(f"agentwatch-session-{session_id}.json")
-            with open(out_path, "w") as f:
-                json.dump(data, f, indent=2)
-            console.print(f"[green]{out_path.name} created successfully[/green]")
+        table = Table(box=box.ROUNDED)
+        table.add_column("Resource Type")
+        table.add_column("Deleted Count", justify="right")
 
-        elif format == ExportFormat.md:
-            out_path = output or Path(f"agentwatch-session-{session_id}.md")
+        table.add_row("Database Sessions", str(data.get("pruned_db_sessions", 0)))
+        table.add_row("Trace Files (.json)", str(data.get("pruned_trace_files", 0)))
+        table.add_row(
+            "Checkpoints (Snapshots + Metadata)", str(data.get("pruned_checkpoint_files", 0))
+        )
 
-            session = data.get("session", {})
-            steps = data.get("steps", [])
+        console.print(table)
 
-            lines = [
-                f"# AgentWatch Session: {session.get('session_id', session_id)}",
-                "",
-                "## Session Overview",
-                f"- **Status**: {session.get('status', 'unknown')}",
-                f"- **Framework**: {session.get('framework', 'unknown')}",
-                f"- **Started at**: {session.get('started_at', 'unknown')}",
-                f"- **Ended at**: {session.get('ended_at', 'unknown')}",
-                f"- **Total Steps**: {len(steps)}",
-            ]
-
-            if session.get("goal"):
-                lines.extend(["", "### Goal", session.get("goal")])
-
-            fa = data.get("failure_analysis")
-            if fa:
-                lines.extend(
-                    [
-                        "",
-                        "## Failure Analysis",
-                        f"- **Primary Cause**: {fa.get('primary_cause', 'unknown')}",
-                    ]
-                )
-                if fa.get("recommendations"):
-                    lines.append("- **Recommendations**:")
-                    for rec in fa.get("recommendations", []):
-                        lines.append(f"  - {rec}")
-
-            lines.extend(["", "## Execution Timeline"])
-            for step in steps:
-                event = step.get("event", {})
-                idx = step.get("index", 0)
-                etype = event.get("event_type", "unknown")
-                status = event.get("status", "")
-
-                status_str = f" ({status})" if status else ""
-                lines.extend(
-                    [
-                        "",
-                        f"### Step {idx}",
-                        f"- **Type**: {etype}{status_str}",
-                    ]
-                )
-
-                tool_call = event.get("tool_call")
-                if tool_call:
-                    lines.extend(
-                        [
-                            f"- **Tool**: {tool_call.get('tool_name', 'unknown')}",
-                            "",
-                            "**Command**:",
-                            "```",
-                            tool_call.get("raw_command", ""),
-                            "```",
-                        ]
-                    )
-
-                tool_result = event.get("tool_result")
-                if tool_result:
-                    if tool_result.get("output"):
-                        lines.extend(
-                            [
-                                "",
-                                "**Output**:",
-                                "```",
-                                tool_result.get("output", ""),
-                                "```",
-                            ]
-                        )
-                    if tool_result.get("error"):
-                        lines.extend(
-                            [
-                                "",
-                                "**Error**:",
-                                "```",
-                                tool_result.get("error", ""),
-                                "```",
-                            ]
-                        )
-
-                safety = event.get("safety")
-                if safety and safety.get("blocked"):
-                    lines.extend(
-                        [
-                            "",
-                            "**Safety Block**:",
-                            f"- **Risk Level**: {safety.get('risk_level', 'unknown').upper()}",
-                            "- **Reasons**:",
-                        ]
-                    )
-                    for r in safety.get("reasons", []):
-                        lines.append(f"  - {r}")
-
-            with open(out_path, "w", encoding="utf-8") as f:
-                f.write("\n".join(lines) + "\n")
-            console.print(f"[green]{out_path.name} created successfully[/green]")
+        if dry_run:
+            console.print(
+                "\n[yellow]Dry-run complete. No files or database records were actually deleted.[/yellow]"
+            )
+        else:
+            console.print("\n[green]Prune complete.[/green]")
 
     asyncio.run(_run())
 
 
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-# confidence command
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-
-
-# ---------------------------------------------
+# ─────────────────────────────────────────────
 # Entrypoint
 # ---------------------------------------------
 

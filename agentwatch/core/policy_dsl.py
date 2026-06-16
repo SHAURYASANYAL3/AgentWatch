@@ -85,8 +85,10 @@ class _Eval:
             m = self._TOKEN.match(self.expr, pos)
             if not m:
                 raise ValueError(f"bad token at {pos}: {self.expr[pos : pos + 20]!r}")
-            kind = m.lastgroup or ""
-            text = m.group(kind) or ""
+            kind = m.lastgroup
+            if kind is None:  # unreachable: every alternative is a named group
+                raise ValueError(f"unmatched token at {pos}")
+            text = m.group(kind)
             self.tokens.append((kind, text))
             pos = m.end()
 
@@ -161,8 +163,8 @@ class _Eval:
             return t[1][1:-1]
         if t[0] == "PAREN" and t[1] == "(":
             v = self._or()
-            pk = self._peek()
-            if not pk or pk[1] != ")":
+            nxt = self._peek()
+            if not (nxt and nxt[1] == ")"):
                 raise ValueError("expected closing paren")
             self._next()
             return v

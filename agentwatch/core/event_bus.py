@@ -241,17 +241,24 @@ class EventBus:
             handler_ids: set[str] = set()
             handler_ids.update(self._global_handlers)
             handler_ids.update(self._type_index.get(event.event_type, set()))
-            handlers_to_dispatch = []
-            for hid in handler_ids:
-                if hid in self._handlers:
-                    f = self._handlers[hid].event_filter
-                    if not (f and not f.matches(event)):
-                        handlers_to_dispatch.append(self._handlers[hid])
+            handlers_to_dispatch = [
+                self._handlers[hid]
+                for hid in handler_ids
+                if hid in self._handlers and self._handler_accepts(self._handlers[hid], event)
+            ]
 
         # Dispatch outside the lock to avoid holding it during handler I/O
         tasks = [self._dispatch(reg, event) for reg in handlers_to_dispatch]
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
+
+    @staticmethod
+    def _handler_accepts(reg: HandlerRegistration, event: AgentEvent) -> bool:
+        """Return True if the handler's optional event filter accepts the event."""
+        event_filter = reg.event_filter
+        if event_filter is None:
+            return True
+        return event_filter.matches(event)
 
     async def _dispatch(self, reg: HandlerRegistration, event: AgentEvent) -> None:
         """Invoke one handler, running sync callables in a thread pool.

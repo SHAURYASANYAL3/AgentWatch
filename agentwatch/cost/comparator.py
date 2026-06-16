@@ -31,7 +31,7 @@ class CostEstimate:
     output_cost: float
     total: float
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, str | float]:
         return {
             "model": self.model,
             "input_cost": self.input_cost,

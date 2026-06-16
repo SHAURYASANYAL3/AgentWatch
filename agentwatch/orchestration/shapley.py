@@ -59,11 +59,11 @@ def shapley_attribution(
         for _ in range(n_samples):
             perm_list = list(agents)
             rng.shuffle(perm_list)
-            mc_prefix: list[str] = []
+            prefix = []
             prev = value_fn([])
             for a in perm_list:
-                mc_prefix.append(a)
-                cur = value_fn(list(mc_prefix))
+                prefix.append(a)
+                cur = value_fn(list(prefix))
                 contributions[a] += cur - prev
                 prev = cur
         contributions = {a: v / n_samples for a, v in contributions.items()}

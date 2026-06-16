@@ -678,6 +678,7 @@ class SafetyEngine:
         """
         tool_call = event.tool_call
         if not tool_call:
+            # No tool call → nothing to score; return an explicit zero-risk result.
             return SafetyCheckData(risk_level=RiskLevel.SAFE, risk_score=0.0), False
 
         # 1. Pattern-based risk scoring
