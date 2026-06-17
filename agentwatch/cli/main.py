@@ -77,11 +77,9 @@ def main_callback(ctx: typer.Context):
         print_systematic_menu,
     )
 
-    cinematic_logo_reveal(ascii_art)
-
-    matrix_type_print("Initializing runtime components...", color="90;3m", delay=0.01)
-
     if ctx.invoked_subcommand is None:
+        cinematic_logo_reveal(ascii_art)
+        matrix_type_print("Initializing runtime components...", color="90;3m", delay=0.01)
         print_systematic_menu()
         _IN_REPL = True
         try:
