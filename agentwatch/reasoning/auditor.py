@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from statistics import mean
-from typing import Any
+from typing import Any, cast
 
 from agentwatch.core.schema import AgentEvent, EventType
 

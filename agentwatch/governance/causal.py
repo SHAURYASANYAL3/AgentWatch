@@ -11,7 +11,7 @@ import hashlib
 import json
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any, cast
+from typing import Any
 
 from agentwatch.memory.causal_graph import CausalGraph
 
