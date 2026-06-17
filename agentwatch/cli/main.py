@@ -57,23 +57,8 @@ app.add_typer(safety_app)
 _IN_REPL = False
 
 
-def version_callback(value: bool):
-    if value:
-        console.print(f"AgentWatch CLI Version: [bold cyan]{__version__}[/bold cyan]")
-        raise typer.Exit()
-
-
 @app.callback(invoke_without_command=True)
-def main_callback(
-    ctx: typer.Context,
-    version: bool = typer.Option(
-        None,
-        "--version",
-        callback=version_callback,
-        is_eager=True,
-        help="Show the version and exit.",
-    ),
-):
+def main_callback(ctx: typer.Context):
     """AgentWatch CLI with ASCII Animation"""
     global _IN_REPL
     if _IN_REPL:
@@ -94,11 +79,9 @@ def main_callback(
         print_systematic_menu,
     )
 
-    cinematic_logo_reveal(ascii_art)
-
-    matrix_type_print("Initializing runtime components...", color="90;3m", delay=0.01)
-
     if ctx.invoked_subcommand is None:
+        cinematic_logo_reveal(ascii_art)
+        matrix_type_print("Initializing runtime components...", color="90;3m", delay=0.01)
         print_systematic_menu()
         _IN_REPL = True
         try:
@@ -159,9 +142,9 @@ def _start_repl_session():
             break
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 # Helpers
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 
 
 def _status_color(status: str) -> str:
@@ -232,7 +215,7 @@ def _handle_http_status_error(exc: httpx.HTTPStatusError, api_url: str) -> NoRet
 
 # ─────────────────────────────────────────────
 # NEW HELPER: Dry-run printer
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 
 
 def _dry_run_print(action: str, detail: str = "") -> None:
@@ -241,9 +224,9 @@ def _dry_run_print(action: str, detail: str = "") -> None:
     console.print(f"[bold yellow][DRY-RUN][/bold yellow] Would {action}{detail_str}")
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 # watch command — wrap an agent run
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 
 
 @session_app.command(name="watch")
@@ -359,9 +342,9 @@ def watch(
     asyncio.run(_run())
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 # replay command
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 
 
 @session_app.command(name="replay")
@@ -436,9 +419,9 @@ def replay(
     asyncio.run(_run())
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 # sessions command
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 
 
 @session_app.command(name="list")
@@ -489,7 +472,7 @@ class ExportFormat(str, Enum):
     md = "md"
 
 
-@app.command()
+@session_app.command(name="export")
 def export(
     session_id: str = typer.Argument(..., help="ID of the session to export"),
     format: ExportFormat = typer.Option(
@@ -641,7 +624,7 @@ def export(
 
 # ─────────────────────────────────────────────
 # confidence command
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 
 
 @session_app.command(name="score")
@@ -718,9 +701,9 @@ def confidence(
     console.print(f"\n[dim]{result.explanation}[/dim]")
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 # safety command
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 
 
 @safety_app.command(name="check")
@@ -799,9 +782,9 @@ def safety(
     )
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 # serve command
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 
 
 @server_app.command(name="start")
@@ -860,25 +843,30 @@ def serve(
     )
 
 
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 # status command
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 
 
-@app.command()
+@server_app.command(name="status")
 def status(
     api_url: str = typer.Option("http://localhost:8000", "--api"),
+    refresh_rate: float = typer.Option(1.0, "--refresh", help="Refresh rate in seconds"),
     api_key: str | None = API_KEY_OPTION,
 ) -> None:
-    """[bold]Show[/bold] a real-time summary of AgentWatch runtime status."""
+    """[bold]Show[/bold] a real-time live dashboard of AgentWatch runtime status."""
 
     async def _run() -> None:
         try:
             import httpx
+            from rich.align import Align
+            from rich.layout import Layout
+            from rich.live import Live
         except ImportError:
-            console.print("[red]httpx not installed. Run: pip install httpx[/red]")
+            console.print("[red]Missing dependencies. Run: pip install httpx rich[/red]")
             raise typer.Exit(1)
 
+        # Initial connection check
         async with httpx.AsyncClient() as client:
             try:
                 resp = await client.get(
@@ -893,29 +881,81 @@ def status(
                 console.print(f"[red]Failed to connect to API at {api_url}: {exc}[/red]")
                 raise typer.Exit(1)
 
-        data = resp.json()
+        def generate_dashboard(data, error_msg=None):
+            if error_msg:
+                return Panel(
+                    f"[red]{error_msg}[/red]", title="AgentWatch Error", border_style="red"
+                )
 
-        console.print("\n[bold cyan]AgentWatch Runtime Status[/bold cyan]")
-        console.print("────────────────────────────────\n")
+            # Create sub-panels
+            active = data.get("active_sessions", 0)
+            failed = data.get("failed_sessions", 0)
+            blocked = data.get("blocked_sessions", 0)
 
-        console.print("[bold]Agent Activity[/bold]")
-        console.print(f"  Active sessions:        {data.get('active_sessions', 0)}")
-        console.print(f"  Failed sessions:        {data.get('failed_sessions', 0)}")
-        console.print(f"  Safety-blocked sessions: {data.get('blocked_sessions', 0)}\n")
+            activity = Table.grid(padding=(0, 2))
+            activity.add_row("Active Sessions:", f"[green]{active}[/green]")
+            activity.add_row("Failed Sessions:", f"[red]{failed}[/red]")
+            activity.add_row("Blocked Sessions:", f"[yellow]{blocked}[/yellow]")
+            p1 = Panel(activity, title="[cyan]Agent Activity[/cyan]", border_style="cyan")
 
-        console.print("[bold]Resource Utilization[/bold]")
-        console.print(f"  Total tokens consumed:  {data.get('total_tokens', 0):,}")
-        console.print(f"  Estimated cost:         ${data.get('estimated_cost_usd', 0.0):.4f}\n")
+            tokens = data.get("total_tokens", 0)
+            cost = data.get("estimated_cost_usd", 0.0)
 
-        safety_stats = data.get("safety_stats", {})
-        eb_stats = data.get("event_bus_stats", {})
+            resources = Table.grid(padding=(0, 2))
+            resources.add_row("Total Tokens:", f"[bold]{tokens:,}[/bold]")
+            resources.add_row("Est. Cost:", f"[green]${cost:.4f}[/green]")
+            p2 = Panel(
+                resources, title="[magenta]Resource Utilization[/magenta]", border_style="magenta"
+            )
 
-        console.print("[bold]Safety & Event Pipeline[/bold]")
-        console.print(f"  Blocked operations:     {safety_stats.get('blocked', 0)}")
-        console.print(f"  Event throughput:       {eb_stats.get('total_published', 0):,} processed")
-        console.print(f"  Active subscribers:     {eb_stats.get('active_subscribers', 0)}\n")
+            safety_stats = data.get("safety_stats", {})
+            eb_stats = data.get("event_bus_stats", {})
 
-    asyncio.run(_run())
+            pipeline = Table.grid(padding=(0, 2))
+            pipeline.add_row("Blocked Ops:", f"[red]{safety_stats.get('blocked', 0)}[/red]")
+            pipeline.add_row("Event T-Put:", f"{eb_stats.get('total_published', 0):,} processed")
+            pipeline.add_row("Subscribers:", f"{eb_stats.get('active_subscribers', 0)}")
+            p3 = Panel(
+                pipeline, title="[yellow]Safety & Event Pipeline[/yellow]", border_style="yellow"
+            )
+
+            layout = Layout()
+            layout.split_column(
+                Layout(
+                    Panel(
+                        Align(
+                            "[bold cyan]AgentWatch Live Runtime Dashboard[/bold cyan]\n[dim]Press Ctrl+C to exit[/dim]",
+                            align="center",
+                        )
+                    ),
+                    size=4,
+                ),
+                Layout(name="body"),
+            )
+            layout["body"].split_row(Layout(p1), Layout(p2), Layout(p3))
+            return layout
+
+        async with httpx.AsyncClient() as client:
+            with Live(
+                generate_dashboard({}), refresh_per_second=1 / refresh_rate, console=console
+            ) as live:
+                while True:
+                    try:
+                        resp = await client.get(
+                            f"{api_url}/api/v1/dashboard/summary",
+                            headers=_api_headers(api_key),
+                            timeout=2.0,
+                        )
+                        resp.raise_for_status()
+                        live.update(generate_dashboard(resp.json()))
+                    except Exception as exc:
+                        live.update(generate_dashboard({}, str(exc)))
+                    await asyncio.sleep(refresh_rate)
+
+    try:
+        asyncio.run(_run())
+    except KeyboardInterrupt:
+        console.print("[dim]Exited status dashboard.[/dim]")
 
 
 # ─────────────────────────────────────────────
@@ -1168,7 +1208,7 @@ def compare(
 
 # ─────────────────────────────────────────────
 # verify-env command
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 
 
 @app.command(name="check-env")
@@ -1180,8 +1220,55 @@ def verify_env() -> None:
 
 
 # ─────────────────────────────────────────────
-# Print helpers
+# redteam command
 # ─────────────────────────────────────────────
+
+
+@app.command()
+def redteam(
+    json_output: bool = typer.Option(False, "--json", help="Emit the report as JSON"),
+) -> None:
+    """[bold]Red-team[/bold] the safety engine with simulated attacks and score resilience."""
+    from agentwatch.security.redteam import RedTeamHarness
+
+    report = RedTeamHarness().run()
+
+    if json_output:
+        console.print_json(data=report.to_dict())
+        raise typer.Exit(0)
+
+    score = report.resilience_score
+    score_color = "green" if score >= 0.8 else "yellow" if score >= 0.5 else "red"
+    console.print(
+        Panel(
+            f"[bold]Red-Team Resilience[/bold]\n"
+            f"Score:    [{score_color}]{score:.0%}[/{score_color}]\n"
+            f"Defended: {report.defended_count}/{report.total} attacks",
+            border_style=score_color,
+            title="AgentWatch redteam",
+        )
+    )
+
+    table = Table(box=box.ROUNDED)
+    table.add_column("Scenario", style="bold")
+    table.add_column("Category")
+    table.add_column("Result")
+    table.add_column("Detail", overflow="fold")
+    for r in report.results:
+        result = "[green]✓ defended[/green]" if r.defended else "[red]✗ bypassed[/red]"
+        table.add_row(r.scenario.id, r.scenario.category.value, result, r.detail)
+    console.print(table)
+
+    if report.bypassed:
+        console.print(
+            f"\n[red]⚠ {len(report.bypassed)} attack(s) bypassed defenses[/red] "
+            "— review the safety detectors for these vectors."
+        )
+
+
+# ─────────────────────────────────────────────
+# Print helpers
+# ---------------------------------------------
 
 
 def _print_live_event(event) -> None:
@@ -1340,162 +1427,6 @@ def _print_sessions_table(sessions: list) -> None:
     animate_table_rows(table, rows, delay=0.08)
 
 
-class ExportFormat(str, Enum):
-    json = "json"
-    md = "md"
-
-
-@session_app.command(name="export")
-def session_export(
-    session_id: str = typer.Argument(..., help="ID of the session to export"),
-    format: ExportFormat = typer.Option(
-        ExportFormat.json, "--format", help="Export format: json or md"
-    ),
-    output: Path | None = typer.Option(None, "--output", "-o", help="Custom output file path"),
-    api_url: str = typer.Option("http://localhost:8000", "--api"),
-) -> None:
-    """[bold]Export[/bold] a session replay to a portable JSON or Markdown file."""
-
-    async def _run() -> None:
-        try:
-            import httpx
-        except ImportError:
-            console.print("[red]httpx not installed. Run: pip install httpx[/red]")
-            raise typer.Exit(1)
-
-        async with httpx.AsyncClient() as client:
-            try:
-                resp = await client.get(
-                    f"{api_url}/api/v1/sessions/{session_id}/replay",
-                    timeout=10.0,
-                )
-                if resp.status_code == 404:
-                    console.print(f"[red]Session {session_id} not found.[/red]")
-                    raise typer.Exit(1)
-                resp.raise_for_status()
-            except httpx.HTTPError as exc:
-                console.print(f"[red]Failed to connect to API at {api_url}: {exc}[/red]")
-                raise typer.Exit(1)
-
-        data = resp.json()
-
-        if format == ExportFormat.json:
-            out_path = output or Path(f"agentwatch-session-{session_id}.json")
-            with open(out_path, "w") as f:
-                json.dump(data, f, indent=2)
-            console.print(f"[green]{out_path.name} created successfully[/green]")
-
-        elif format == ExportFormat.md:
-            out_path = output or Path(f"agentwatch-session-{session_id}.md")
-
-            session = data.get("session", {})
-            steps = data.get("steps", [])
-
-            lines = [
-                f"# AgentWatch Session: {session.get('session_id', session_id)}",
-                "",
-                "## Session Overview",
-                f"- **Status**: {session.get('status', 'unknown')}",
-                f"- **Framework**: {session.get('framework', 'unknown')}",
-                f"- **Started at**: {session.get('started_at', 'unknown')}",
-                f"- **Ended at**: {session.get('ended_at', 'unknown')}",
-                f"- **Total Steps**: {len(steps)}",
-            ]
-
-            if session.get("goal"):
-                lines.extend(["", "### Goal", session.get("goal")])
-
-            fa = data.get("failure_analysis")
-            if fa:
-                lines.extend(
-                    [
-                        "",
-                        "## Failure Analysis",
-                        f"- **Primary Cause**: {fa.get('primary_cause', 'unknown')}",
-                    ]
-                )
-                if fa.get("recommendations"):
-                    lines.append("- **Recommendations**:")
-                    for rec in fa.get("recommendations", []):
-                        lines.append(f"  - {rec}")
-
-            lines.extend(["", "## Execution Timeline"])
-            for step in steps:
-                event = step.get("event", {})
-                idx = step.get("index", 0)
-                etype = event.get("event_type", "unknown")
-                status = event.get("status", "")
-
-                status_str = f" ({status})" if status else ""
-                lines.extend(
-                    [
-                        "",
-                        f"### Step {idx}",
-                        f"- **Type**: {etype}{status_str}",
-                    ]
-                )
-
-                tool_call = event.get("tool_call")
-                if tool_call:
-                    lines.extend(
-                        [
-                            f"- **Tool**: {tool_call.get('tool_name', 'unknown')}",
-                            "",
-                            "**Command**:",
-                            "```",
-                            tool_call.get("raw_command", ""),
-                            "```",
-                        ]
-                    )
-
-                tool_result = event.get("tool_result")
-                if tool_result:
-                    if tool_result.get("output"):
-                        lines.extend(
-                            [
-                                "",
-                                "**Output**:",
-                                "```",
-                                tool_result.get("output", ""),
-                                "```",
-                            ]
-                        )
-                    if tool_result.get("error"):
-                        lines.extend(
-                            [
-                                "",
-                                "**Error**:",
-                                "```",
-                                tool_result.get("error", ""),
-                                "```",
-                            ]
-                        )
-
-                safety = event.get("safety")
-                if safety and safety.get("blocked"):
-                    lines.extend(
-                        [
-                            "",
-                            "**Safety Block**:",
-                            f"- **Risk Level**: {safety.get('risk_level', 'unknown').upper()}",
-                            "- **Reasons**:",
-                        ]
-                    )
-                    for r in safety.get("reasons", []):
-                        lines.append(f"  - {r}")
-
-            with open(out_path, "w", encoding="utf-8") as f:
-                f.write("\n".join(lines) + "\n")
-            console.print(f"[green]{out_path.name} created successfully[/green]")
-
-    asyncio.run(_run())
-
-
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-# confidence command
-# ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-
-
 # ─────────────────────────────────────────────
 # session prune command
 # ─────────────────────────────────────────────
@@ -1617,7 +1548,7 @@ def session_prune(
 
 # ─────────────────────────────────────────────
 # Entrypoint
-# ─────────────────────────────────────────────
+# ---------------------------------------------
 
 
 def main() -> None:

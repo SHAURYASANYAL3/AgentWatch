@@ -91,7 +91,7 @@ def test_status_401_reports_auth_error():
     )
     mock_client, ctx = _patch_client(resp)
     with ctx:
-        result = runner.invoke(app, ["status"])
+        result = runner.invoke(app, ["server", "status"])
     assert result.exit_code == 1
     assert "Authentication failed" in result.stdout
     assert "AGENTWATCH_API_KEY" in result.stdout
@@ -106,7 +106,7 @@ def test_export_sends_api_key_from_flag(tmp_path):
     out = tmp_path / "session.json"
     with ctx:
         result = runner.invoke(
-            app, ["export", "sess1", "--api-key", "exp-key", "--output", str(out)]
+            app, ["session", "export", "sess1", "--api-key", "exp-key", "--output", str(out)]
         )
     assert result.exit_code == 0
     assert _sent_headers(mock_client) == {"X-Api-Key": "exp-key"}

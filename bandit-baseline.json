@@ -132,7 +132,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "agentwatch\\adapters\\openai_agents.py": {
+    "agentwatch/adapters/openai_agents.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -145,7 +145,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "agentwatch\\adapters\\openclaw.py": {
+    "agentwatch/adapters/openclaw.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -184,7 +184,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "agentwatch\\alerting\\channels.py": {
+    "agentwatch/alerting/channels.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -197,7 +197,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "agentwatch\\alerting\\engine.py": {
+    "agentwatch/alerting/engine.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -249,7 +249,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "agentwatch\\cli\\animator.py": {
+    "agentwatch/cli/animator.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -262,7 +262,7 @@
       "nosec": 5,
       "skipped_tests": 0
     },
-    "agentwatch\\cli\\demo.py": {
+    "agentwatch/cli/demo.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -1367,7 +1367,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "agentwatch\\rollback\\engine.py": {
+    "agentwatch/rollback/engine.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -1614,7 +1614,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "agentwatch\\tracing\\sampling.py": {
+    "agentwatch/tracing/sampling.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
