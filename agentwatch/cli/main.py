@@ -471,7 +471,7 @@ class ExportFormat(str, Enum):
     md = "md"
 
 
-@app.command()
+@session_app.command(name="export")
 def export(
     session_id: str = typer.Argument(..., help="ID of the session to export"),
     format: ExportFormat = typer.Option(
@@ -850,6 +850,7 @@ def serve(
 @server_app.command(name="status")
 def status(
     api_url: str = typer.Option("http://localhost:8000", "--api"),
+    refresh_rate: float = typer.Option(1.0, "--refresh", help="Refresh rate in seconds"),
     api_key: str | None = API_KEY_OPTION,
 ) -> None:
     """[bold]Show[/bold] a real-time live dashboard of AgentWatch runtime status."""
@@ -864,6 +865,7 @@ def status(
             console.print("[red]Missing dependencies. Run: pip install httpx rich[/red]")
             raise typer.Exit(1)
 
+        # Initial connection check
         async with httpx.AsyncClient() as client:
             try:
                 resp = await client.get(
@@ -878,7 +880,11 @@ def status(
                 console.print(f"[red]Failed to connect to API at {api_url}: {exc}[/red]")
                 raise typer.Exit(1)
 
-        data = resp.json()
+        def generate_dashboard(data, error_msg=None):
+            if error_msg:
+                return Panel(
+                    f"[red]{error_msg}[/red]", title="AgentWatch Error", border_style="red"
+                )
 
             # Create sub-panels
             active = data.get("active_sessions", 0)
@@ -936,6 +942,7 @@ def status(
                     try:
                         resp = await client.get(
                             f"{api_url}/api/v1/dashboard/summary",
+                            headers=_api_headers(api_key),
                             timeout=2.0,
                         )
                         resp.raise_for_status()
