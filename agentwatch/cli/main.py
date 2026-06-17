@@ -36,13 +36,17 @@ app.add_typer(session_app)
 
 console = Console()
 
-session_app = typer.Typer(name="session", help="Manage and inspect agent sessions", no_args_is_help=True)
-server_app = typer.Typer(name="server", help="Manage the AgentWatch API server", no_args_is_help=True)
+session_app = typer.Typer(
+    name="session", help="Manage and inspect agent sessions", no_args_is_help=True
+)
+server_app = typer.Typer(
+    name="server", help="Manage the AgentWatch API server", no_args_is_help=True
+)
 safety_app = typer.Typer(
-    name="safety", 
+    name="safety",
     help="AgentWatch Safety & Risk Engine. Analyze shell commands against security policies.",
     rich_markup_mode="rich",
-    no_args_is_help=True
+    no_args_is_help=True,
 )
 
 app.add_typer(session_app)
@@ -58,32 +62,40 @@ def version_callback(value: bool):
         console.print(f"AgentWatch CLI Version: [bold cyan]{__version__}[/bold cyan]")
         raise typer.Exit()
 
+
 @app.callback(invoke_without_command=True)
 def main_callback(
     ctx: typer.Context,
-    version: bool = typer.Option(None, "--version", callback=version_callback, is_eager=True, help="Show the version and exit."),
+    version: bool = typer.Option(
+        None,
+        "--version",
+        callback=version_callback,
+        is_eager=True,
+        help="Show the version and exit.",
+    ),
 ):
     """AgentWatch CLI with ASCII Animation"""
     global _IN_REPL
     if _IN_REPL:
         return
-        
+
     ascii_art = [
         r"    ___                    __ _       __      __       __  ",
         r"   /   |  ____  ___  ____ / /| |     / /___ _/ /______/ /_ ",
         r"  / /| | / __ `/ _ \/ __ \ __/ | /| / / __ `/ __/ ___/ __ \\",
         r" / ___ |/ /_/ /  __/ / / / /_  |/ |/ / /_/ / /_/ /__/ / / /",
         r"/_/  |_|\__, /\___/_/ /_/\__/  |__/|__/\__,_/\__/\___/_/ /_/",
-        r"       /____/                                              "
+        r"       /____/                                              ",
     ]
-    
+
     from agentwatch.cli.animator import (
         cinematic_logo_reveal,
         matrix_type_print,
         print_systematic_menu,
     )
+
     cinematic_logo_reveal(ascii_art)
-    
+
     matrix_type_print("Initializing runtime components...", color="90;3m", delay=0.01)
 
     if ctx.invoked_subcommand is None:
@@ -94,6 +106,7 @@ def main_callback(
         finally:
             _IN_REPL = False
 
+
 def _start_repl_session():
     """Run an interactive REPL shell for the CLI."""
     import os
@@ -103,33 +116,37 @@ def _start_repl_session():
     from rich.prompt import Prompt
 
     from agentwatch.cli.animator import matrix_type_print
-    
+
     console.print()
-    console.print(Panel(
-        "[dim]Enter commands directly (e.g. 'safety check ...', 'session list').\n"
-        "Type [bold cyan]clear[/bold cyan] to wipe screen, or [bold red]exit[/bold red] to terminate.[/dim]",
-        title="[bold cyan]⚡ AGENTWATCH INTERACTIVE TERMINAL ⚡[/bold cyan]",
-        border_style="cyan",
-        padding=(0, 2)
-    ))
-    
+    console.print(
+        Panel(
+            "[dim]Enter commands directly (e.g. 'safety check ...', 'session list').\n"
+            "Type [bold cyan]clear[/bold cyan] to wipe screen, or [bold red]exit[/bold red] to terminate.[/dim]",
+            title="[bold cyan]⚡ AGENTWATCH INTERACTIVE TERMINAL ⚡[/bold cyan]",
+            border_style="cyan",
+            padding=(0, 2),
+        )
+    )
+
     while True:
         try:
             # High-end cinematic prompt
-            cmd_line = Prompt.ask("\n[bold cyan]AW[/bold cyan][dim]:[/dim][bold green]CORE[/bold green] [bold white]>[/bold white]")
+            cmd_line = Prompt.ask(
+                "\n[bold cyan]AW[/bold cyan][dim]:[/dim][bold green]CORE[/bold green] [bold white]>[/bold white]"
+            )
             cmd_line = cmd_line.strip()
             if not cmd_line:
                 continue
-                
+
             cmd_lower = cmd_line.lower()
             if cmd_lower in ("exit", "quit"):
                 matrix_type_print("Terminating AgentWatch session...", color="dim")
                 break
-                
+
             if cmd_lower in ("clear", "cls"):
                 os.system("cls" if os.name == "nt" else "clear")  # nosec # noqa: S605, S607
                 continue
-                
+
             args = shlex.split(cmd_line)
             try:
                 app(args, standalone_mode=False)
@@ -140,8 +157,6 @@ def _start_repl_session():
         except (KeyboardInterrupt, EOFError):
             matrix_type_print("\nTerminating AgentWatch session...", color="dim")
             break
-
-
 
 
 # ─────────────────────────────────────────────
@@ -447,10 +462,10 @@ def sessions(
                 with console.status("[cyan]Fetching sessions...[/cyan]", spinner="bouncingBar"):
                     resp = await client.get(
                         f"{api_url}/api/v1/sessions",
-                    params={"limit": limit, "framework": framework},
-                    headers=_api_headers(api_key),
-                    timeout=10.0,
-                )
+                        params={"limit": limit, "framework": framework},
+                        headers=_api_headers(api_key),
+                        timeout=10.0,
+                    )
                 resp.raise_for_status()
             except httpx.HTTPStatusError as exc:
                 _handle_http_status_error(exc, api_url)
@@ -715,7 +730,7 @@ def safety(
 ) -> None:
     """
     [bold]Score[/bold] the risk level of a shell command.
-    
+
     [b]Example Usage:[/b]
     [dim]python -m agentwatch.cli.main safety check "rm -rf /var/log"[/dim]
     """
@@ -728,7 +743,7 @@ def safety(
 
     scorer = RiskScorer()
     tool = ToolCallData(tool_name="bash", raw_command=command, arguments={"command": command})
-    
+
     # Live animated analysis phase
     with Progress(
         SpinnerColumn(spinner_name="dots2", style="cyan"),
@@ -741,12 +756,12 @@ def safety(
         time.sleep(0.3)
         progress.update(task, description="Evaluating what-if scenario impact...")
         time.sleep(0.3)
-        
+
     level, score, reasons, policies = scorer.score(tool)
     color = _risk_color(level.value)
-    
+
     matrix_type_print("THREAT ANALYSIS COMPLETE", color="1;96m", delay=0.02)
-    
+
     # Constructing What-If scenario based on risk level
     if score >= 0.8:
         what_if = "If executed, this command could permanently destroy critical data, compromise host integrity, or create severe security vulnerabilities. Recovery would require full system restoration."
@@ -762,24 +777,24 @@ def safety(
         f"[dim]Risk:[/dim]   [{color}][bold]{level.value.upper()}[/bold][/{color}] (Confidence: {score:.2f})",
         "",
     ]
-    
+
     if reasons:
         details.append(f"[bold {color}]VIOLATIONS DETECTED:[/bold {color}]")
         for r, p in zip(reasons, policies):
             details.append(f"  [{color}][>][/{color}] [bold]{p}[/bold]: {r}")
     else:
         details.append("[green][+] No heuristic violations detected.[/green]")
-        
+
     details.append("")
     details.append("[bold cyan]WHAT-IF SIMULATION:[/bold cyan]")
     details.append(f"[italic]{what_if}[/italic]")
-    
+
     console.print(
         Panel(
             "\n".join(details),
             border_style=color,
             title=f"[{color}]Security Report[/{color}]",
-            padding=(1, 2)
+            padding=(1, 2),
         )
     )
 
@@ -1266,7 +1281,7 @@ def _print_session_summary(session, events) -> None:
         if result.overall_score >= 0.4
         else "red"
     )
-    
+
     matrix_type_print(f"SESSION COMPLETE: {session.session_id}", color="1;96m", delay=0.03)
 
     console.print(
@@ -1291,8 +1306,12 @@ def _print_sessions_table(sessions: list) -> None:
     from rich import box
 
     from agentwatch.cli.animator import animate_table_rows
-    
-    table = Table(title="[bold green]R E C E N T   S E S S I O N S[/bold green]", box=box.DOUBLE_EDGE, border_style="bold cyan")
+
+    table = Table(
+        title="[bold green]R E C E N T   S E S S I O N S[/bold green]",
+        box=box.DOUBLE_EDGE,
+        border_style="bold cyan",
+    )
     table.add_column("ID", style="bold green", width=16)
     table.add_column("Agent", style="bold cyan")
     table.add_column("Framework", style="dim white")
@@ -1306,15 +1325,17 @@ def _print_sessions_table(sessions: list) -> None:
         sid = s["session_id"][:12] + "..."
         sc = _status_color(s.get("status", ""))
         started = s.get("started_at", "")[:16] if s.get("started_at") else "-"
-        rows.append([
-            sid,
-            s.get("agent_name") or s.get("agent_id", "?")[:16],
-            s.get("framework", "-"),
-            f"[{sc}]{s.get('status', '-')}[/{sc}]",
-            str(s.get("total_events", 0)),
-            f"{s.get('total_tokens', 0):,}",
-            started,
-        ])
+        rows.append(
+            [
+                sid,
+                s.get("agent_name") or s.get("agent_id", "?")[:16],
+                s.get("framework", "-"),
+                f"[{sc}]{s.get('status', '-')}[/{sc}]",
+                str(s.get("total_events", 0)),
+                f"{s.get('total_tokens', 0):,}",
+                started,
+            ]
+        )
 
     animate_table_rows(table, rows, delay=0.08)
 
@@ -1475,8 +1496,6 @@ def session_export(
 # ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
 
-
-
 # ─────────────────────────────────────────────
 # session prune command
 # ─────────────────────────────────────────────
@@ -1607,6 +1626,8 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
 def main() -> None:
     app()
 
