@@ -78,8 +78,8 @@ def matrix_type_print(text: str, color: str = "96m", delay: float = 0.01) -> Non
         if char.strip():
             # Show random character briefly
             sys.stdout.write(
-                f"\r\033[{color}{current_text}\033[0m\033[92m{random.choice(CHARS)}\033[0m"
-            )  # nosec # noqa: S311
+                f"\r\033[{color}{current_text}\033[0m\033[92m{random.choice(CHARS)}\033[0m"  # nosec # noqa: S311
+            )
             sys.stdout.flush()
             time.sleep(0.005)
         current_text += char
