@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+from typing import cast
 
 logger = logging.getLogger(__name__)
 
@@ -111,5 +112,6 @@ def validate_channels(
                 "Incomplete PagerDuty configuration: "
                 "pagerduty_routing_key is required when pagerduty_webhook_url is set."
             )
-        validate_pagerduty_webhook(pagerduty_webhook_url)
-        validate_pagerduty_key(pagerduty_routing_key)
+        # Type narrowing: prior checks at lines 100-113 guarantee non-None here.
+        validate_pagerduty_webhook(cast(str, pagerduty_webhook_url))
+        validate_pagerduty_key(cast(str, pagerduty_routing_key))
