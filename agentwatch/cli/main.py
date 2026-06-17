@@ -580,7 +580,7 @@ def safety(
 
 @app.command()
 def serve(
-    host: str = typer.Option("0.0.0.0", "--host"),
+    host: str = typer.Option("0.0.0.0", "--host"),  # nosec B104 — operator-overridable default
     port: int = typer.Option(8000, "--port"),
     reload: bool = typer.Option(False, "--reload"),
     dry_run: bool = typer.Option(
