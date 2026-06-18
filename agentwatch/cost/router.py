@@ -112,7 +112,7 @@ class ModelRouter:
                 )
                 return RouteDecision(chosen=model, reason=reason, bypassed=bypassed)
             bypassed.append(model)
-        
+
         # All available models unhealthy — fall back to the highest priority model not excluded
         for model in self.priority:
             if model not in exclude:
@@ -121,7 +121,7 @@ class ModelRouter:
                     reason="all_models_unhealthy_falling_back_to_primary",
                     bypassed=bypassed,
                 )
-        
+
         raise RuntimeError(f"All priority models excluded. Excluded: {exclude}")
 
     def health_snapshot(self) -> dict[str, dict[str, float]]:
@@ -145,10 +145,10 @@ class ModelRouter:
         while True:
             if len(attempted) >= len(self.priority):
                 raise RuntimeError(f"All models failed. Attempted: {attempted}")
-                
+
             decision = self.choose(exclude=attempted)
             model = decision.chosen
-            
+
             attempted.append(model)
             try:
                 # Assuming the function accepts the chosen model name

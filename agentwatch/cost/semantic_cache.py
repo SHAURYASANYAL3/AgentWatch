@@ -64,9 +64,7 @@ class SemanticCache:
 
             return None
 
-    async def set(
-        self, query: str, response: str, metadata: dict[str, Any] | None = None
-    ) -> None:
+    async def set(self, query: str, response: str, metadata: dict[str, Any] | None = None) -> None:
         """Store a query-response pair in the semantic cache."""
         query_embeddings = await self.embedder.embed([query])
         query_vec = query_embeddings[0] if query_embeddings else None

@@ -847,6 +847,7 @@ def serve(
 # top command
 # ---------------------------------------------
 
+
 @server_app.command(name="top")
 def top(
     api_url: str = typer.Option("http://localhost:8000", "--api"),
@@ -898,7 +899,7 @@ def top(
                 return Panel(
                     "No active agent sessions running.",
                     title="[cyan]AgentWatch Top[/cyan]",
-                    border_style="cyan"
+                    border_style="cyan",
                 )
 
             for s in top_sessions:
@@ -931,12 +932,15 @@ def top(
 
                     await asyncio.sleep(refresh_rate)
 
-        with Live(generate_dashboard({"top_sessions": []}), refresh_per_second=1.0 / refresh_rate) as live:
+        with Live(
+            generate_dashboard({"top_sessions": []}), refresh_per_second=1.0 / refresh_rate
+        ) as live:
             await poll_loop(live)
 
     import asyncio
 
     asyncio.run(_run())
+
 
 # ---------------------------------------------
 # status command
