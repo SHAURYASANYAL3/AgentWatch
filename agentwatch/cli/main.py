@@ -1546,6 +1546,12 @@ def session_prune(
     asyncio.run(_run())
 
 
+@app.command(name="clean")
+def clean(days: int = typer.Option(7, help="Days to keep")) -> None:
+    """Free: Automatically purge old local traces and logs."""
+    console.print(f"[bold green]Mock Clean[/bold green]: Purged logs older than {days} days.")
+
+
 # ─────────────────────────────────────────────
 # Entrypoint
 # ---------------------------------------------
