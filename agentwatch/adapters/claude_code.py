@@ -79,7 +79,7 @@ class ClaudeCodeEventParser:
         try:
             data = json.loads(raw_line)
         except json.JSONDecodeError:
-            logger.debug("Non-JSON line from Claude Code: %s", raw_line[:100])
+            logger.debug("Skipping non-JSON output from Claude Code")
             return None
 
         return self._dispatch(data)
@@ -365,7 +365,8 @@ class ClaudeCodeAdapter:
             env=env,
         )
 
-        assert process.stdout is not None
+        if process.stdout is None:  # pragma: no cover - defensive
+            raise RuntimeError("Claude Code subprocess produced no stdout stream")
 
         async for raw_line in process.stdout:
             line = raw_line.decode("utf-8", errors="replace")

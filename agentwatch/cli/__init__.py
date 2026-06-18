@@ -1,1 +1,1 @@
-from agentwatch.cli.main import main
+# Empty __init__ to prevent runpy RuntimeWarning
