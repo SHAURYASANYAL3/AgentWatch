@@ -4,12 +4,18 @@
       "login": "sreerevanth",
       "avatar_url": "https://github.com/sreerevanth.png",
       "html_url": "https://github.com/sreerevanth",
-      "contributions": 37
+      "contributions": 39
     },
     {
       "login": "SHAURYASANYAL3",
       "avatar_url": "https://github.com/SHAURYASANYAL3.png",
       "html_url": "https://github.com/SHAURYASANYAL3",
+      "contributions": 15
+    },
+    {
+      "login": "DebasmitaBose0",
+      "avatar_url": "https://github.com/DebasmitaBose0.png",
+      "html_url": "https://github.com/DebasmitaBose0",
       "contributions": 13
     },
     {
@@ -19,10 +25,16 @@
       "contributions": 12
     },
     {
-      "login": "DebasmitaBose0",
-      "avatar_url": "https://github.com/DebasmitaBose0.png",
-      "html_url": "https://github.com/DebasmitaBose0",
-      "contributions": 10
+      "login": "pavsoss",
+      "avatar_url": "https://github.com/pavsoss.png",
+      "html_url": "https://github.com/pavsoss",
+      "contributions": 9
+    },
+    {
+      "login": "SakethSumanBathini",
+      "avatar_url": "https://github.com/SakethSumanBathini.png",
+      "html_url": "https://github.com/SakethSumanBathini",
+      "contributions": 7
     },
     {
       "login": "SHUBHAM2775",
@@ -37,28 +49,28 @@
       "contributions": 5
     },
     {
+      "login": "prachishelke1312",
+      "avatar_url": "https://github.com/prachishelke1312.png",
+      "html_url": "https://github.com/prachishelke1312",
+      "contributions": 5
+    },
+    {
       "login": "rishabhextra365-lang",
       "avatar_url": "https://github.com/rishabhextra365-lang.png",
       "html_url": "https://github.com/rishabhextra365-lang",
       "contributions": 5
     },
     {
-      "login": "pavsoss",
-      "avatar_url": "https://github.com/pavsoss.png",
-      "html_url": "https://github.com/pavsoss",
+      "login": "Prateeks16",
+      "avatar_url": "https://github.com/Prateeks16.png",
+      "html_url": "https://github.com/Prateeks16",
       "contributions": 3
     },
     {
-      "login": "prachishelke1312",
-      "avatar_url": "https://github.com/prachishelke1312.png",
-      "html_url": "https://github.com/prachishelke1312",
-      "contributions": 3
-    },
-    {
-      "login": "SakethSumanBathini",
-      "avatar_url": "https://github.com/SakethSumanBathini.png",
-      "html_url": "https://github.com/SakethSumanBathini",
-      "contributions": 3
+      "login": "speed-velocity",
+      "avatar_url": "https://github.com/speed-velocity.png",
+      "html_url": "https://github.com/speed-velocity",
+      "contributions": 2
     },
     {
       "login": "harika880",
@@ -76,6 +88,12 @@
       "login": "aabhinavvvvvvv",
       "avatar_url": "https://github.com/aabhinavvvvvvv.png",
       "html_url": "https://github.com/aabhinavvvvvvv",
+      "contributions": 1
+    },
+    {
+      "login": "aishwaryabnateekar-ui",
+      "avatar_url": "https://github.com/aishwaryabnateekar-ui.png",
+      "html_url": "https://github.com/aishwaryabnateekar-ui",
       "contributions": 1
     },
     {
@@ -109,15 +127,21 @@
       "contributions": 1
     },
     {
-      "login": "speed-velocity",
-      "avatar_url": "https://github.com/speed-velocity.png",
-      "html_url": "https://github.com/speed-velocity",
+      "login": "vikask011",
+      "avatar_url": "https://github.com/vikask011.png",
+      "html_url": "https://github.com/vikask011",
       "contributions": 1
     },
     {
       "login": "rudrapatel1908",
       "avatar_url": "https://github.com/rudrapatel1908.png",
       "html_url": "https://github.com/rudrapatel1908",
+      "contributions": 1
+    },
+    {
+      "login": "KolaSailaja",
+      "avatar_url": "https://github.com/KolaSailaja.png",
+      "html_url": "https://github.com/KolaSailaja",
       "contributions": 1
     },
     {
@@ -133,6 +157,6 @@
       "contributions": 1
     }
   ],
-  "updated_at": "2026-06-14T15:45:28Z",
-  "total": 22
+  "updated_at": "2026-06-18T16:18:38Z",
+  "total": 26
 }
