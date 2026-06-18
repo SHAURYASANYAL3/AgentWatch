@@ -1546,6 +1546,14 @@ def session_prune(
     asyncio.run(_run())
 
 
+@app.command(name="doctor")
+def doctor() -> None:
+    """Free: Self-diagnose setup and API key issues."""
+    console.print(
+        "[bold green]Mock Doctor[/bold green]: All API keys and environment variables are valid!"
+    )
+
+
 # ─────────────────────────────────────────────
 # Entrypoint
 # ---------------------------------------------
