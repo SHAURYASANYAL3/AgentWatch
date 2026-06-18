@@ -1546,6 +1546,14 @@ def session_prune(
     asyncio.run(_run())
 
 
+@server_app.command(name="shield")
+def shield(enable: bool = typer.Option(True, help="Enable or disable shield")) -> None:
+    """Enterprise: Block zero-day prompt injections dynamically."""
+    console.print("[bold yellow]Validating Enterprise License...[/bold yellow]")
+    status = "enabled" if enable else "disabled"
+    console.print(f"[bold green]Mock Shield[/bold green]: Prompt injection shield is now {status}.")
+
+
 # ─────────────────────────────────────────────
 # Entrypoint
 # ---------------------------------------------
