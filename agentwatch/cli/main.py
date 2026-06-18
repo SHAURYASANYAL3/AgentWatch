@@ -1546,6 +1546,18 @@ def session_prune(
     asyncio.run(_run())
 
 
+@app.command(name="compare")
+def compare(
+    task: str = typer.Option(..., help="Task script"),
+    model_a: str = typer.Option(..., help="Model A"),
+    model_b: str = typer.Option(..., help="Model B"),
+) -> None:
+    """Free: A/B test two models side-by-side."""
+    console.print(
+        f"[bold green]Mock Compare[/bold green]: Comparing {model_a} vs {model_b} for {task}."
+    )
+
+
 # ─────────────────────────────────────────────
 # Entrypoint
 # ---------------------------------------------
