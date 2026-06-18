@@ -16,10 +16,7 @@ COLOR_INDIGO = "#5C6BC0"
 COLOR_DIM = "dim"
 COLOR_WHITE = "white"
 
-def render_ui():
-    # ==========================================
-    # 1. Top Global Status Panel
-    # ==========================================
+def get_top_panel():
     status_text = Text()
     status_text.append("Opus 4.8", style=COLOR_CYAN)
     status_text.append(" · effort: xhigh · advisor: fable-5\n", style=COLOR_WHITE)
@@ -28,12 +25,16 @@ def render_ui():
     status_text.append(" · 5h: 1% · 7d: 0%\n", style=COLOR_WHITE)
     status_text.append("▶▶ bypass permissions on (shift+tab to cycle)", style=f"{COLOR_RED_CRIMSON} bold")
 
-    top_panel = Panel(
+    return Panel(
         status_text,
         border_style=COLOR_DIM,
         padding=(0, 1)
     )
 
+def print_header():
+    console.print(get_top_panel())
+
+def render_ui():
     # ==========================================
     # 2. Main Body Container Content
     # ==========================================
@@ -97,7 +98,7 @@ def render_ui():
     footer_text = Text("\nPress Enter to continue...", style=f"bold {COLOR_INDIGO}")
 
     # Render the layout
-    console.print(top_panel)
+    console.print(get_top_panel())
     console.print(main_panel)
     console.print(footer_text)
 

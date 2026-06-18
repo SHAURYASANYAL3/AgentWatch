@@ -63,7 +63,7 @@ def main_callback(ctx: typer.Context):
         return
 
     from agentwatch.cli.animator import matrix_type_print
-    from agentwatch.cli.ui import render_ui
+    from agentwatch.cli.ui import print_header, render_ui
 
     if ctx.invoked_subcommand is None:
         render_ui()
@@ -72,6 +72,8 @@ def main_callback(ctx: typer.Context):
             _start_repl_session()
         finally:
             _IN_REPL = False
+    else:
+        print_header()
 
 
 def _start_repl_session():
@@ -87,8 +89,16 @@ def _start_repl_session():
     console.print()
     console.print(
         Panel(
-            "[dim]Enter commands directly (e.g. 'safety check ...', 'session list').\n"
-            "Type [bold cyan]clear[/bold cyan] to wipe screen, or [bold red]exit[/bold red] to terminate.[/dim]",
+            "[dim]Available commands:[/dim]\n"
+            "  [bold cyan]session watch[/bold cyan]   [dim]- Watch an agent execution[/dim]\n"
+            "  [bold cyan]session replay[/bold cyan]  [dim]- Replay a captured session[/dim]\n"
+            "  [bold cyan]session list[/bold cyan]    [dim]- List recent sessions[/dim]\n"
+            "  [bold cyan]session export[/bold cyan]  [dim]- Export a session to JSON/Markdown[/dim]\n"
+            "  [bold cyan]session score[/bold cyan]   [dim]- Score execution confidence[/dim]\n"
+            "  [bold cyan]safety check[/bold cyan]    [dim]- Score the risk level of a command[/dim]\n"
+            "  [bold cyan]server start[/bold cyan]    [dim]- Start the API server[/dim]\n\n"
+            "[dim]Type [bold white]--help[/bold white] after any command for options.\n"
+            "Type [bold white]clear[/bold white] to clear screen, or [bold red]exit[/bold red] to quit.[/dim]",
             title="[bold cyan]⚡ AGENTWATCH INTERACTIVE TERMINAL ⚡[/bold cyan]",
             border_style="cyan",
             padding=(0, 2),
