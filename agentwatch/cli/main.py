@@ -1544,27 +1544,6 @@ def session_prune(
     asyncio.run(_run())
 
 
-# ─────────────────────────────────────────────
-# Entrypoint
-# ---------------------------------------------
-
-
-def main() -> None:
-    app()
-
-
-if __name__ == "__main__":
-    main()
-
-
-def main() -> None:
-    app()
-
-
-if __name__ == "__main__":
-    main()
-
-
 # --- Newly Ported Commands ---
 
 cost_app = typer.Typer(
@@ -1576,6 +1555,7 @@ cost_app = typer.Typer(
 app.add_typer(cost_app)
 
 
+@app.command(name="audit")
 @safety_app.command(name="audit")
 def audit_command(
     session_id: str = typer.Argument(..., help="ID of the session to audit"),
@@ -1590,6 +1570,7 @@ def audit_command(
     console.print("[green]✓ Audit complete. No critical vulnerabilities found.[/green]")
 
 
+@app.command(name="replay-session")
 @session_app.command(name="replay-session")
 def replay_session(
     session_id: str = typer.Argument(..., help="ID of the session to replay"),
@@ -1617,6 +1598,7 @@ def swarm(
     console.print(panel)
 
 
+@app.command(name="cost-predict")
 @cost_app.command(name="predict")
 def cost_predict(
     task: str = typer.Argument(..., help="Task description"),
@@ -1630,6 +1612,7 @@ def cost_predict(
     console.print(panel)
 
 
+@app.command(name="shield")
 @safety_app.command(name="shield")
 def shield(
     level: str = typer.Option("high", help="Shield level (low, medium, high)"),
@@ -1667,6 +1650,7 @@ def clean() -> None:
     )
 
 
+@app.command(name="export-csv")
 @session_app.command(name="export-csv")
 def export_csv(
     session_id: str = typer.Argument(..., help="ID of the session"),
@@ -1697,6 +1681,7 @@ def compare_models(
     console.print(table)
 
 
+@app.command(name="share")
 @session_app.command(name="share")
 def share(
     session_id: str = typer.Argument(..., help="ID of the session to share"),
@@ -1709,3 +1694,16 @@ def share(
             border_style="magenta",
         )
     )
+
+
+# ─────────────────────────────────────────────
+# Entrypoint
+# ---------------------------------------------
+
+
+def main() -> None:
+    app()
+
+
+if __name__ == "__main__":
+    main()
