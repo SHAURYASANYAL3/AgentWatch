@@ -62,25 +62,11 @@ def main_callback(ctx: typer.Context):
     if _IN_REPL:
         return
 
-    ascii_art = [
-        r"    ___                    __ _       __      __       __  ",
-        r"   /   |  ____  ___  ____ / /| |     / /___ _/ /______/ /_ ",
-        r"  / /| | / __ `/ _ \/ __ \ __/ | /| / / __ `/ __/ ___/ __ \\",
-        r" / ___ |/ /_/ /  __/ / / / /_  |/ |/ / /_/ / /_/ /__/ / / /",
-        r"/_/  |_|\__, /\___/_/ /_/\__/  |__/|__/\__,_/\__/\___/_/ /_/",
-        r"       /____/                                              ",
-    ]
-
-    from agentwatch.cli.animator import (
-        cinematic_logo_reveal,
-        matrix_type_print,
-        print_systematic_menu,
-    )
+    from agentwatch.cli.animator import matrix_type_print
+    from agentwatch.cli.ui import render_ui
 
     if ctx.invoked_subcommand is None:
-        cinematic_logo_reveal(ascii_art)
-        matrix_type_print("Initializing runtime components...", color="90;3m", delay=0.01)
-        print_systematic_menu()
+        render_ui()
         _IN_REPL = True
         try:
             _start_repl_session()
