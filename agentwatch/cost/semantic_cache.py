@@ -28,9 +28,11 @@ class SemanticCache:
     def __init__(
         self,
         similarity_threshold: float = 0.95,
+        max_entries: int = 1000,
         embedding_provider: EmbeddingProvider | None = None,
     ):
         self.similarity_threshold = similarity_threshold
+        self.max_entries = max_entries
         self.embedder = embedding_provider or EmbeddingProvider()
         self._cache: list[CacheEntry] = []
         self._lock = asyncio.Lock()
@@ -81,4 +83,6 @@ class SemanticCache:
                     metadata=metadata,
                 )
             )
+            if len(self._cache) > self.max_entries:
+                self._cache.pop(0)
             logger.debug("Added entry to semantic cache. Size: %d", len(self._cache))

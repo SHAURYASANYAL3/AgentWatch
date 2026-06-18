@@ -97,23 +97,32 @@ class ModelRouter:
             return False
         return True
 
-    def choose(self) -> RouteDecision:
+    def choose(self, exclude: list[str] | None = None) -> RouteDecision:
+        exclude = exclude or []
         bypassed: list[str] = []
         for model in self.priority:
+            if model in exclude:
+                bypassed.append(model)
+                continue
             if self.is_healthy(model):
                 reason = (
                     f"primary={model}"
                     if not bypassed
-                    else f"failover_to={model} after {len(bypassed)} unhealthy"
+                    else f"failover_to={model} after {len(bypassed)} skipped"
                 )
                 return RouteDecision(chosen=model, reason=reason, bypassed=bypassed)
             bypassed.append(model)
-        # All unhealthy — fall back to the head of priority list anyway
-        return RouteDecision(
-            chosen=self.priority[0],
-            reason="all_models_unhealthy_falling_back_to_primary",
-            bypassed=bypassed[1:],
-        )
+        
+        # All available models unhealthy — fall back to the highest priority model not excluded
+        for model in self.priority:
+            if model not in exclude:
+                return RouteDecision(
+                    chosen=model,
+                    reason="all_models_unhealthy_falling_back_to_primary",
+                    bypassed=bypassed,
+                )
+        
+        raise RuntimeError(f"All priority models excluded. Excluded: {exclude}")
 
     def health_snapshot(self) -> dict[str, dict[str, float]]:
         return {
@@ -134,12 +143,12 @@ class ModelRouter:
         """
         attempted: list[str] = []
         while True:
-            decision = self.choose()
-            model = decision.chosen
-            
-            if model in attempted:
+            if len(attempted) >= len(self.priority):
                 raise RuntimeError(f"All models failed. Attempted: {attempted}")
                 
+            decision = self.choose(exclude=attempted)
+            model = decision.chosen
+            
             attempted.append(model)
             try:
                 # Assuming the function accepts the chosen model name

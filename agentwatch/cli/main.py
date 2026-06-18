@@ -850,7 +850,7 @@ def serve(
 @server_app.command(name="top")
 def top(
     api_url: str = typer.Option("http://localhost:8000", "--api"),
-    refresh_rate: float = typer.Option(1.0, "--refresh", help="Refresh rate in seconds"),
+    refresh_rate: float = typer.Option(1.0, "--refresh", min=0.1, help="Refresh rate in seconds"),
     api_key: str | None = API_KEY_OPTION,
 ) -> None:
     """[bold]Live Process Monitor[/bold] showing executing agent loops, active tools, and token burn rate."""

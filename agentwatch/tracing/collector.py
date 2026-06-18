@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from agentwatch.core.schema import AgentEvent, AgentSession, EventType, ExecutionStatus
+from agentwatch.governance.hipaa import redact_phi
 
 logger = logging.getLogger(__name__)
 
@@ -120,14 +121,32 @@ class TraceCollector:
     async def ingest(self, event: AgentEvent) -> None:
         """Process one event into the trace collection."""
         if self.hipaa_compliance_mode:
-            from agentwatch.governance.hipaa import redact_phi
             # Redact common text fields
             if event.goal:
                 event.goal = redact_phi(event.goal).redacted
             if event.tool_call and event.tool_call.raw_command:
                 event.tool_call.raw_command = redact_phi(event.tool_call.raw_command).redacted
-            if getattr(event, "content", None):
-                event.content = redact_phi(event.content).redacted
+            if event.prompt_preview:
+                event.prompt_preview = redact_phi(event.prompt_preview).redacted
+            if event.planner_output_preview:
+                event.planner_output_preview = redact_phi(event.planner_output_preview).redacted
+            if event.tool_result and isinstance(event.tool_result.output, str):
+                event.tool_result.output = redact_phi(event.tool_result.output).redacted
+            if event.agent_message and getattr(event.agent_message, "content", None):
+                if isinstance(event.agent_message.content, dict):
+                    # Shallow copy and redact string values
+                    event.agent_message.content = {
+                        k: redact_phi(v).redacted if isinstance(v, str) else v
+                        for k, v in event.agent_message.content.items()
+                    }
+                elif isinstance(event.agent_message.content, str):
+                    event.agent_message.content = redact_phi(event.agent_message.content).redacted
+            if event.metadata:
+                # Shallow copy to avoid mutating original
+                event.metadata = {
+                    k: redact_phi(v).redacted if isinstance(v, str) else v
+                    for k, v in event.metadata.items()
+                }
 
         async with self._lock:
             self._stats["ingested"] += 1
@@ -158,6 +177,9 @@ class TraceCollector:
                 trace.session.status = event.status
             elif event.event_type == EventType.AGENT_ERROR:
                 trace.session.status = ExecutionStatus.FAILURE
+
+            if event.tool_call and event.tool_call.tool_name:
+                trace.session.metadata["current_tool"] = event.tool_call.tool_name
 
             if event.token_usage:
                 trace.session.total_tokens += event.token_usage.total_tokens

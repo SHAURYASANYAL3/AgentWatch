@@ -1052,12 +1052,7 @@ async def dashboard_top(_auth: None = Depends(_require_api_key)) -> dict[str, An
     top_sessions = []
     now = datetime.now(UTC)
     for s in sessions:
-        events = _collector.get_events(s.session_id, limit=50)
-        current_tool = "idle"
-        for ev in reversed(events):
-            if ev.tool_call:
-                current_tool = ev.tool_call.tool_name
-                break
+        current_tool = s.metadata.get("current_tool", "idle")
         
         duration = (now - s.started_at).total_seconds()
         burn_rate = s.total_tokens / duration if duration > 0 else 0
