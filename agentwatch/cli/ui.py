@@ -11,7 +11,7 @@ console = Console(color_system="truecolor")
 COLOR_CYAN = "#00E5FF"
 COLOR_MUTED_GREEN = "#81C784"
 COLOR_RED_CRIMSON = "#FF3B30"
-COLOR_SALMON = "#FF8A65"
+COLOR_RED_ACCENT = "#FF0000"
 COLOR_INDIGO = "#5C6BC0"
 COLOR_DIM = "dim"
 COLOR_WHITE = "white"
@@ -40,8 +40,8 @@ def render_ui():
     main_content = []
 
     # 3. Accent Badges
-    badge_text = Text("∗ Welcome to AgentWatch research preview!", style=COLOR_SALMON)
-    badge_panel = Panel(badge_text, border_style=COLOR_SALMON, expand=False, padding=(0, 1))
+    badge_text = Text("∗ Welcome to AgentWatch research preview!", style=COLOR_RED_ACCENT)
+    badge_panel = Panel(badge_text, border_style=COLOR_RED_ACCENT, expand=False, padding=(0, 1))
     main_content.append(badge_panel)
 
     # 4. 3D Drop-Shadow ASCII Logo
@@ -54,7 +54,7 @@ def render_ui():
   ██║  ██║╚██████╔╝███████╗██║ ╚████║   ██║   ╚███╔███╔╝██║  ██║   ██║   ╚██████╗ ██║  ██║
   ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝   ╚═╝    ╚══╝╚══╝ ╚═╝  ╚═╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝
 """
-    logo_text = Text(ascii_logo.strip('\n'), style=f"bold {COLOR_SALMON}")
+    logo_text = Text(ascii_logo.strip('\n'), style=f"bold {COLOR_RED_ACCENT}")
     main_content.append(Padding(logo_text, (1, 0, 1, 0)))
 
     # 5. Instructional Content & Links
