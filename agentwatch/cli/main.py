@@ -29,8 +29,7 @@ app = typer.Typer(
     add_completion=True,
     rich_markup_mode="rich",
 )
-session_app = typer.Typer(name="session", help="Manage AgentWatch sessions.")
-app.add_typer(session_app)
+
 
 console = Console()
 
