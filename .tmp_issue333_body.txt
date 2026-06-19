@@ -1,0 +1,23 @@
+The recent dependency audit identified several out‑of‑date packages and a medium‑severity vulnerability in `cryptography` (CVE‑2024‑12345).
+
+**Goal**: Bring the dependency stack up‑to‑date, resolve the CVE, and ensure the lock files reflect the latest safe versions.
+
+**Tasks**:
+1. Upgrade `cryptography` to version >= 43.0.1 (addresses CVE‑2024‑12345).
+2. Upgrade the following packages to their latest minor/patch releases:
+   - fastapi (0.115.0 → 0.119.0)
+   - uvicorn (0.30.0 → 0.33.0)
+   - pydantic (2.9.0 → 2.11.0)
+   - redis (5.1.0 → 5.3.0)
+   - celery (5.4.0 → 5.5.0)
+   - httpx (0.27.0 → 0.28.0)
+   - rich (13.8.0 → 13.9.0)
+3. Regenerate `requirements.txt` / `poetry.lock` (or the relevant lock file) after the upgrades.
+4. Run the full dependency‑auditor again to confirm no high‑severity findings remain.
+5. Add a CI step that fails the build if any high‑severity vulnerability is detected.
+
+**Acceptance Criteria**:
+- No CVE‑2024‑12345 entry remains in the audit report.
+- All listed packages report as up‑to‑date.
+- CI passes with the new lock files.
+- Documentation of the upgrade process is added to the repo’s CONTRIBUTING guide.

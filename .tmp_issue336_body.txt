@@ -1,0 +1,19 @@
+The new CLI modules (`animator.py`, `verify_env.py`, `demo.py`) currently lack clear documentation, making it difficult for new contributors and users to understand their purpose and usage.
+
+**Goal**: Provide comprehensive documentation for the entire `agentwatch.cli` package, including usage examples, API reference, and integration guidance.
+
+**Tasks**:
+1. Add detailed module‑level docstrings to `animator.py`, `verify_env.py`, and `demo.py` describing their functionality, parameters, and side effects.
+2. Expand the project README with a **"Getting Started"** section that:
+   - Shows how to install the package.
+   - Demonstrates running each new CLI command (`agentwatch cli animator`, `agentwatch cli verify-env`, etc.).
+   - Provides sample output and explains optional flags.
+3. Generate API documentation using a tool like **Sphinx** or **mkdocstrings** for the `agentwatch.cli` namespace.
+4. Add a CI step to build the docs on each PR and fail if the build breaks.
+5. Ensure the documentation builds on Windows, macOS, and Linux (handle platform‑specific sections conditionally).
+
+**Acceptance Criteria**:
+- All public functions/classes in `agentwatch.cli` have descriptive docstrings.
+- README contains a clear "Getting Started" guide with runnable examples.
+- Documentation site (or generated HTML) builds without warnings.
+- CI includes a documentation build job that passes.

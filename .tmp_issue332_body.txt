@@ -1,0 +1,19 @@
+The CLI currently invokes `subprocess.Popen` directly in several modules (animator.py, main.py, demo.py, verify_env.py) without sanitising arguments, creating a command‑injection risk.
+
+**Goal**: Introduce a central utility `agentwatch/cli/_utils/run_cmd.py` that:
+- Accepts a list of arguments (no `shell=True`).
+- Whitelists allowed characters for each argument.
+- Captures stdout/stderr and raises a custom `CommandError` on non‑zero exit codes.
+- Logs execution details at DEBUG level.
+
+**Tasks**:
+1. Implement `run_cmd.py` with validation, logging, exception handling.
+2. Replace all direct `subprocess.Popen` calls in the CLI with `run_cmd.run(...)`.
+3. Add unit tests for the wrapper (mock subprocess).
+4. Update documentation and add type hints.
+5. Ensure cross‑platform support (fallback when speech synthesis unavailable).
+
+**Acceptance Criteria**:
+- No remaining `subprocess.Popen` calls in `agentwatch/cli`.
+- All CI tests pass; security scan shows zero command‑injection findings.
+- README updated with usage example of the new helper.

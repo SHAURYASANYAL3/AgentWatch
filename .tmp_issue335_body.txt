@@ -1,0 +1,23 @@
+The CLI contains several maintainability problems:
+
+- Repeated direct calls to `subprocess.Popen` without validation.
+- An empty `agentwatch/cli/__init__.py` that silences import warnings.
+- Missing type hints, `__all__` declarations, and inconsistent import styles.
+- Duplicate logic across CLI modules (animator, demo, verify_env).
+
+**Goal**: Consolidate common functionality, improve code readability, and enforce a consistent style across the `agentwatch.cli` package.
+
+**Tasks**:
+1. Create a `agentwatch/cli/_utils/__init__.py` and move the new `run_cmd.py` wrapper there (shared with issue #332).
+2. Replace all direct `subprocess.Popen` calls with the new wrapper.
+3. Remove the placeholder `__init__.py` and replace it with a proper package initializer that defines `__all__` for the public CLI entry points.
+4. Add missing type hints to all public functions and enforce `PEP8`/`ruff` compliance.
+5. Run `ruff` and `mypy` across the `agentwatch/cli` package and fix any reported issues.
+6. Update the README and package documentation to reflect the new module layout.
+
+**Acceptance Criteria**:
+- No `subprocess.Popen` usage remains in `agentwatch/cli`.
+- `__init__.py` exports the intended public symbols via `__all__`.
+- All functions have type annotations.
+- `ruff` reports 0 errors, `mypy` passes with no issues.
+- CI passes with the new static‑analysis steps added.
