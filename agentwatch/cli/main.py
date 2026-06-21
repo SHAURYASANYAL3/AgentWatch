@@ -1546,4 +1546,21 @@ def session_prune(
     asyncio.run(_run())
 
 
+# ─────────────────────────────────────────────
+# Entrypoint
+# ---------------------------------------------
+
+
+def main() -> None:
+    app()
+
+
+if __name__ == "__main__":
+    main()
+
+
 @app.command(name="export-csv")
+@session_app.command(name="export-csv")
+def export_csv(
+    session_id: str = typer.Argument(..., help="ID of the session"),
+    output: str = typer.Option("output.csv", help="Output file path"),
