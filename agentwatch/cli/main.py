@@ -49,8 +49,6 @@ safety_app = typer.Typer(
 )
 
 
-
-
 _IN_REPL = False
 
 
