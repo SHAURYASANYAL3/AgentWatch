@@ -1560,7 +1560,6 @@ if __name__ == "__main__":
 
 
 @app.command(name="cost-predict")
-@cost_app.command(name="predict")
 def cost_predict(
     task: str = typer.Argument(..., help="Task description"),
 ) -> None:
