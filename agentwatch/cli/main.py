@@ -1546,6 +1546,19 @@ def session_prune(
     asyncio.run(_run())
 
 
+# ─────────────────────────────────────────────
+# Entrypoint
+# ---------------------------------------------
+
+
+def main() -> None:
+    app()
+
+
+if __name__ == "__main__":
+    main()
+
+
 @app.command(name="clean")
 def clean() -> None:
     """[bold]Clean[/bold]: Remove temporary files and cached outputs."""
@@ -1566,6 +1579,3 @@ def clean() -> None:
             border_style="yellow",
         )
     )
-
-
-@app.command(name="export-csv")
