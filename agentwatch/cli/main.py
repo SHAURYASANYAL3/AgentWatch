@@ -1564,3 +1564,36 @@ if __name__ == "__main__":
 def export_csv(
     session_id: str = typer.Argument(..., help="ID of the session"),
     output: str = typer.Option("output.csv", help="Output file path"),
+) -> None:
+    """[bold]Export CSV[/bold]: Export session data to CSV."""
+    import csv
+
+    session_file = Path(f"agentwatch-session-{session_id}.json")
+    if not session_file.exists():
+        console.print(f"[red]Session {session_id} not found locally. Run export first.[/red]")
+        raise typer.Exit(1)
+
+    data = _load_session_file(session_file)
+    events = data.get("events", [])
+
+    with open(output, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["timestamp", "event_type", "status", "tool_name"])
+        for e in events:
+            tool_call = e.get("tool_call") or {}
+            writer.writerow(
+                [
+                    e.get("timestamp"),
+                    e.get("event_type"),
+                    e.get("status"),
+                    tool_call.get("tool_name", ""),
+                ]
+            )
+
+    console.print(
+        Panel(
+            f"Session [cyan]{session_id}[/cyan] exported with {len(events)} events to [yellow]{output}[/yellow]",
+            title="[green]Export[/green]",
+            border_style="green",
+        )
+    )
