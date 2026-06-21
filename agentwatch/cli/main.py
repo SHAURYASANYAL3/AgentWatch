@@ -1546,13 +1546,6 @@ def session_prune(
     asyncio.run(_run())
 
 
-@server_app.command(name="swarm")
-def swarm() -> None:
-    """Enterprise: Manage multi-agent orchestration clusters."""
-    console.print("[bold yellow]Validating Enterprise License...[/bold yellow]")
-    console.print("[bold green]Mock Swarm[/bold green]: Displaying cluster status.")
-
-
 # ─────────────────────────────────────────────
 # Entrypoint
 # ---------------------------------------------
@@ -1564,3 +1557,8 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+@app.command(name="swarm")
+def swarm(
+    config: str = typer.Option(..., help="Path to swarm config"),
