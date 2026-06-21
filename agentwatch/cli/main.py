@@ -1547,19 +1547,25 @@ def session_prune(
 
 
 @app.command(name="clean")
-def clean(days: int = typer.Option(7, help="Days to keep")) -> None:
-    """Free: Automatically purge old local traces and logs."""
-    console.print(f"[bold green]Mock Clean[/bold green]: Purged logs older than {days} days.")
+def clean() -> None:
+    """[bold]Clean[/bold]: Remove temporary files and cached outputs."""
+    cache_dir = Path(".agentwatch_cache")
+    bytes_freed = 0
+    if cache_dir.exists() and cache_dir.is_dir():
+        for p in cache_dir.glob("**/*"):
+            if p.is_file():
+                bytes_freed += p.stat().st_size
+                p.unlink()
+        cache_dir.rmdir()
+
+    mb_freed = bytes_freed / (1024 * 1024) if bytes_freed > 0 else 0
+    console.print(
+        Panel(
+            f"Cleaned {mb_freed:.2f}MB of temporary files.",
+            title="[yellow]Cleanup[/yellow]",
+            border_style="yellow",
+        )
+    )
 
 
-# ─────────────────────────────────────────────
-# Entrypoint
-# ---------------------------------------------
-
-
-def main() -> None:
-    app()
-
-
-if __name__ == "__main__":
-    main()
+@app.command(name="export-csv")
