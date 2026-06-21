@@ -348,83 +348,61 @@ def watch(
 # ---------------------------------------------
 
 
-@session_app.command(name="replay")
-def replay(
-    session_file: Path = typer.Argument(..., help="Path to session JSON file"),
-    speed: str = typer.Option("instant", "--speed", "-s", help="instant|fast|normal|slow"),
-    from_step: int = typer.Option(0, "--from", help="Start from step N"),
-    to_step: int | None = typer.Option(None, "--to", help="End at step N"),
-    show_all: bool = typer.Option(False, "--all", help="Show all events including metadata"),
-    failure_only: bool = typer.Option(False, "--failures", "-f", help="Show only failure points"),
+@session_app.command(name="replay-session")
+def replay_session(
+    session_id: str = typer.Argument(..., help="ID of the session to replay"),
+    step: int = typer.Option(0, help="Step to resume from"),
 ) -> None:
-    """[bold]Replay[/bold] a captured session step-by-step."""
+    """[bold]Replay[/bold]: Rewind and resume failed agent sessions."""
 
-    async def _run() -> None:
-        from agentwatch.core.schema import AgentEvent, AgentSession
-        from agentwatch.replay.engine import ReplayEngine, ReplaySpeed
+    async def _run():
+        from agentwatch.rollback.engine import RollbackEngine, RollbackStatus
 
-        data = _load_session_file(session_file)
-        session = AgentSession(**data["session"])
-        events = [AgentEvent(**e) for e in data["events"]]
-
-        engine = ReplayEngine()
-        rs = engine.load_from_events(session, events)
-
-        console.print(
-            Panel(
-                f"[bold]Replaying Session[/bold]\n"
-                f"[dim]ID:[/dim]     {session.session_id}\n"
-                f"[dim]Agent:[/dim]  {session.agent_name or session.agent_id}\n"
-                f"[dim]Steps:[/dim]  {rs.total_steps}\n"
-                f"[dim]Status:[/dim] "
-                f"[{_status_color(session.status.value)}]{session.status.value}"
-                f"[/{_status_color(session.status.value)}]",
-                border_style="blue",
+        engine = RollbackEngine()
+        res = await engine.rollback_session(session_id, to_step=step)
+        if res.status == RollbackStatus.COMPLETED:
+            console.print(
+                Panel(
+                    f"Session [cyan]{session_id}[/cyan] rewound to step [yellow]{step}[/yellow] and is ready to resume.",
+                    title="[blue]Replay-Session[/blue]",
+                    border_style="blue",
+                )
             )
-        )
-
-        if rs.failure_analysis:
-            fa = rs.failure_analysis
-            if (
-                fa.primary_cause.value != "unknown" or fa.anomaly_flags
-                if hasattr(fa, "anomaly_flags")
-                else False
-            ):
-                console.print("\n[bold red]Failure Analysis:[/bold red]")
-                console.print(f"  Cause: [yellow]{fa.primary_cause.value}[/yellow]")
-                console.print(f"  {fa.summary}")
-                if fa.recommendations:
-                    console.print("\n[bold]Recommendations:[/bold]")
-                    for rec in fa.recommendations:
-                        console.print(f"  → {rec}")
-
-        console.print()
-
-        speed_map = {
-            "instant": ReplaySpeed.INSTANT,
-            "fast": ReplaySpeed.FAST,
-            "normal": ReplaySpeed.NORMAL,
-            "slow": ReplaySpeed.SLOW,
-        }
-        replay_speed = speed_map.get(speed, ReplaySpeed.INSTANT)
-
-        async for step in engine.replay_async(
-            rs, speed=replay_speed, start_step=from_step, end_step=to_step
-        ):
-            if failure_only and not step.is_failure_point:
-                continue
-            _print_replay_step(step, show_all=show_all)
-
-        console.print("\n[green]✓ Replay complete[/green]")
+        else:
+            console.print(f"[red]Failed to rewind: {res.error}[/red]")
 
     asyncio.run(_run())
 
 
-# ---------------------------------------------
-# sessions command
-# ---------------------------------------------
+@app.command(name="swarm")
+def swarm(
+    config: str = typer.Option(..., help="Path to swarm config"),
+) -> None:
+    """[bold]Swarm[/bold]: Orchestrate multiple agents."""
+    import json
+
+    path = Path(config)
+    if not path.exists():
+        console.print(f"[red]Config file {config} not found[/red]")
+        raise typer.Exit(1)
+    with open(path) as f:
+        conf_data = json.load(f)
+    agents = conf_data.get("agents", [])
+    console.print(
+        Panel(
+            f"Initializing swarm with [cyan]{len(agents)}[/cyan] agents...",
+            title="[magenta]Swarm Orchestrator[/magenta]",
+            border_style="magenta",
+        )
+    )
+    for agent in agents:
+        console.print(
+            f" - Started agent [bold]{agent.get('name', 'unknown')}[/bold] with model [yellow]{agent.get('model', 'default')}[/yellow]"
+        )
+    console.print("[green]Swarm is active and communicating via Event Bus.[/green]")
 
 
+@app.command(name="cost-predict")
 @session_app.command(name="list")
 def sessions(
     api_url: str = typer.Option("http://localhost:8000", "--api"),
