@@ -1546,6 +1546,19 @@ def session_prune(
     asyncio.run(_run())
 
 
+# ─────────────────────────────────────────────
+# Entrypoint
+# ---------------------------------------------
+
+
+def main() -> None:
+    app()
+
+
+if __name__ == "__main__":
+    main()
+
+
 @app.command(name="doctor")
 def doctor() -> None:
     """[bold]Doctor[/bold]: Check AgentWatch installation health."""
@@ -1582,28 +1595,3 @@ def doctor() -> None:
         table.add_row("Docker", "[red]Not installed[/red]")
 
     console.print(table)
-
-
-@app.command(name="clean")
-def clean() -> None:
-    """[bold]Clean[/bold]: Remove temporary files and cached outputs."""
-    cache_dir = Path(".agentwatch_cache")
-    bytes_freed = 0
-    if cache_dir.exists() and cache_dir.is_dir():
-        for p in cache_dir.glob("**/*"):
-            if p.is_file():
-                bytes_freed += p.stat().st_size
-                p.unlink()
-        cache_dir.rmdir()
-
-    mb_freed = bytes_freed / (1024 * 1024) if bytes_freed > 0 else 0
-    console.print(
-        Panel(
-            f"Cleaned {mb_freed:.2f}MB of temporary files.",
-            title="[yellow]Cleanup[/yellow]",
-            border_style="yellow",
-        )
-    )
-
-
-@app.command(name="export-csv")
