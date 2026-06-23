@@ -1,5 +1,5 @@
 """
-OBS-010 — Production Traffic Sampling.
+OBS-010 - Production Traffic Sampling.
 
 Strategies:
     - HeadSampler: simple probability sampling on session start
@@ -68,7 +68,7 @@ class FailureAlwaysSampler:
 
 class ReservoirSampler:
     """
-    Algorithm R reservoir sampling — guarantees rare events stay in the buffer
+    Algorithm R reservoir sampling - guarantees rare events stay in the buffer
     even under unbounded stream length. Size k.
     """
 
