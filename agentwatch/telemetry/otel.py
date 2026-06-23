@@ -327,7 +327,13 @@ class TelemetryProvider:
             try:
                 return uuid.UUID(id_str).int & ((1 << bits) - 1)
             except ValueError:
-                h = hashlib.md5(id_str.encode("utf-8")).digest()  # noqa: S324
+                # Deterministic fallback ID generation for malformed identifiers.
+                # Not used for security.
+                h = hashlib.blake2b(
+                    id_str.encode("utf-8"),
+                    digest_size=16 if bits == 128 else 8,
+                    usedforsecurity=False,
+                ).digest()
                 return int.from_bytes(h, byteorder="big") & ((1 << bits) - 1)
 
         def _parse_time(time_str: str | None) -> int | None:
