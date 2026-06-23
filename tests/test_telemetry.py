@@ -249,8 +249,8 @@ def test_export_reasoning_trace_otel_unavailable():
     
     trace_data = {"trace_id": "uuid", "spans": [{"span_id": "uuid"}]}
     
-    # Should not raise exception
-    provider.export_reasoning_trace(trace_data)
+    # Should not raise exception and return False
+    assert provider.export_reasoning_trace(trace_data) is False
 
 
 def test_export_reasoning_trace_collector_isolation():
@@ -278,7 +278,43 @@ def test_export_reasoning_trace_collector_isolation():
     try:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        # Should not raise exception
         loop.run_until_complete(collector.ingest(event))
+        
+        # Verify trace is NOT marked exported
+        trace = collector.get_trace("session-1")
+        assert trace.is_exported is False
+    finally:
+        agentwatch.telemetry.otel._provider = original
+
+
+def test_export_reasoning_trace_collector_success():
+    from agentwatch.telemetry.collector import TraceCollector
+    from agentwatch.core.schema import AgentEvent, EventType, ExecutionStatus
+    import asyncio
+    
+    collector = TraceCollector()
+    
+    import agentwatch.telemetry.otel
+    original = agentwatch.telemetry.otel._provider
+    mock_provider = MagicMock()
+    mock_provider.export_reasoning_trace.return_value = True
+    agentwatch.telemetry.otel._provider = mock_provider
+    
+    event = AgentEvent(
+        session_id="session-success",
+        agent_id="agent-1",
+        event_type=EventType.SESSION_END,
+        status=ExecutionStatus.SUCCESS,
+        step_number=1,
+    )
+    
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(collector.ingest(event))
+        
+        # Verify trace IS marked exported
+        trace = collector.get_trace("session-success")
+        assert trace.is_exported is True
     finally:
         agentwatch.telemetry.otel._provider = original

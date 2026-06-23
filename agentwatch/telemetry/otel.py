@@ -304,10 +304,10 @@ class TelemetryProvider:
                 duration_seconds, {"framework": framework, "status": status}
             )
 
-    def export_reasoning_trace(self, trace_data: dict[str, Any]) -> None:
+    def export_reasoning_trace(self, trace_data: dict[str, Any]) -> bool:
         """Export a finalized ReasoningTrace dict to OpenTelemetry."""
         if not self._initialized or not _OTEL_AVAILABLE or not self._tracer:
-            return
+            return False
 
         import hashlib
         import uuid
@@ -359,7 +359,7 @@ class TelemetryProvider:
 
         trace_id_int = _safe_int_from_id(trace_data.get("trace_id"), 128)
         if not trace_id_int:
-            return
+            return False
 
         # Create a fake root context to enforce trace_id
         dummy_span_id = _safe_int_from_id(trace_data.get("trace_id", "root"), 64) or 1
@@ -416,6 +416,8 @@ class TelemetryProvider:
 
             span.end(end_time=end_time_ns)
             otel_contexts[aw_span_id] = set_span_in_context(span, Context())
+
+        return True
 
 
 # Compatibility alias for OBS tests

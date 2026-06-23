@@ -120,6 +120,7 @@ class TraceCollector:
     async def ingest(self, event: AgentEvent) -> None:
         """Process one event into the trace collection."""
         trace_to_export = None
+        trace_obj = None
 
         async with self._lock:
             self._stats["ingested"] += 1
@@ -165,13 +166,14 @@ class TraceCollector:
                 EventType.AGENT_ERROR,
             ):
                 trace_to_export = trace.to_dict()
-                trace.is_exported = True
+                trace_obj = trace
 
-        if trace_to_export:
+        if trace_to_export and trace_obj:
             try:
                 from agentwatch.telemetry.otel import get_telemetry
 
-                get_telemetry().export_reasoning_trace(trace_to_export)
+                if get_telemetry().export_reasoning_trace(trace_to_export):
+                    trace_obj.is_exported = True
             except Exception as exc:
                 logger.warning("Telemetry export failed: %s", exc)
 
