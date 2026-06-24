@@ -17,3 +17,4 @@ async def mock_load(self):
 
 
 agentwatch.memory.engine.EmbeddingProvider._load = mock_load
+
