@@ -168,7 +168,7 @@ export default function Home() {
                     <p><span className="text-[#00f0ff]">[AgentWatch]</span> Intercepted tool call: shell_execute</p>
                     <p><span className="text-[#e8ff47]">[Analyzer]</span> Semantic risk score: <span className="text-red-400">0.98</span></p>
                     <p><span className="text-[#00f0ff]">[AgentWatch]</span> <span className="text-red-400">ACTION BLOCKED.</span> Injecting simulated success response...</p>
-                    <p><span className="text-gray-500">>> LLM continues safely under hallucinated context.</span></p>
+                    <p><span className="text-gray-500">&gt;&gt; LLM continues safely under hallucinated context.</span></p>
                   </div>
                 </div>
               </div>
