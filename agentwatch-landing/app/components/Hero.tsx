@@ -366,6 +366,85 @@ export default function Hero() {
         </div>
       </div>
 
+      {/* Central Visual Workflow / Dashboard */}
+      <div className="relative w-full max-w-5xl mx-auto mt-16 px-6 lg:px-0 z-20">
+        <div className="relative w-full aspect-video rounded-2xl border border-[#00f0ff]/30 bg-[#0c0c0c]/90 backdrop-blur-3xl shadow-[0_0_80px_rgba(0,240,255,0.15)] overflow-hidden flex flex-col">
+          
+          {/* Mac window header */}
+          <div className="h-10 w-full border-b border-white/10 bg-white/5 flex items-center px-4 gap-2 shrink-0">
+            <div className="flex gap-1.5">
+              <div className="w-3 h-3 rounded-full bg-[#ff5f56]" />
+              <div className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
+              <div className="w-3 h-3 rounded-full bg-[#27c93f]" />
+            </div>
+            <div className="mx-auto text-[10px] uppercase tracking-[0.2em] text-[#888] font-mono">Agent Workflow Inspector</div>
+          </div>
+
+          {/* Workflow Body */}
+          <div className="flex-1 relative overflow-hidden flex">
+            {/* Sidebar */}
+            <div className="w-1/4 border-r border-white/10 bg-white/[0.02] p-4 flex flex-col gap-4 hidden sm:flex">
+               <div className="text-xs text-[#00f0ff] uppercase tracking-widest font-bold">Active Sessions</div>
+               <div className="flex flex-col gap-2">
+                 {[1,2,3].map(i => (
+                    <div key={i} className="p-3 rounded-lg border border-white/5 bg-black/20 flex items-center gap-3">
+                       <span className={`w-2 h-2 rounded-full ${i===1 ? 'bg-[#e8ff47] animate-pulse' : 'bg-white/20'}`} />
+                       <div className="flex flex-col">
+                         <span className="text-[10px] text-white/80 font-mono">Session_0x{i}F9</span>
+                         <span className="text-[9px] text-white/40">Monitoring</span>
+                       </div>
+                    </div>
+                 ))}
+               </div>
+            </div>
+
+            {/* Main Graph Area */}
+            <div className="flex-1 relative bg-black/40 p-6 flex items-center justify-center">
+               <div className="absolute inset-0 dot-grid opacity-30" />
+               <div className="absolute top-4 right-4 flex items-center gap-2 bg-black/60 px-3 py-1.5 rounded-full border border-white/10 backdrop-blur-md">
+                 <span className="w-2 h-2 rounded-full bg-[#00f0ff] animate-ping" />
+                 <span className="text-[10px] text-[#00f0ff] font-mono">INTERCEPTING</span>
+               </div>
+
+               {/* Simulated Agent Graph Node */}
+               <div className="relative z-10 w-full max-w-md">
+                 <div className="flex justify-between items-center relative">
+                   {/* Flow lines */}
+                   <div className="absolute left-1/4 right-1/4 h-px bg-gradient-to-r from-[#e8ff47] via-[#00f0ff] to-[#ff6b6b] top-1/2 -translate-y-1/2 z-0" />
+                   
+                   <div className="relative z-10 w-24 h-24 rounded-full border border-[#e8ff47]/50 bg-[#0c0c0c] flex items-center justify-center shadow-[0_0_30px_rgba(232,255,71,0.2)]">
+                      <span className="text-xs text-[#e8ff47] font-mono text-center">LLM<br/>Agent</span>
+                   </div>
+
+                   <div className="relative z-10 w-32 h-32 rounded-xl border border-[#00f0ff] bg-[#0c0c0c]/90 backdrop-blur-xl flex flex-col items-center justify-center shadow-[0_0_50px_rgba(0,240,255,0.3)] gap-2 p-2">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-8 h-8 text-[#00f0ff]">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
+                      <span className="text-xs text-[#00f0ff] font-mono font-bold">AgentWatch</span>
+                   </div>
+
+                   <div className="relative z-10 w-24 h-24 rounded-full border border-[#ff6b6b]/50 bg-[#0c0c0c] flex flex-col items-center justify-center shadow-[0_0_30px_rgba(255,107,107,0.2)] gap-1 p-2 text-center">
+                      <span className="text-xs text-[#ff6b6b] font-mono uppercase">Dangerous<br/>Action</span>
+                      <span className="text-[8px] text-white/50 font-mono">Blocked</span>
+                   </div>
+                 </div>
+
+                 {/* Console log simulation inside the video UI */}
+                 <div className="mt-8 bg-black/80 rounded-lg border border-white/10 p-3 h-24 overflow-hidden relative font-mono text-[10px]">
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/80 z-10" />
+                    <div className="space-y-1 text-white/60 animate-bounce-y">
+                      <p><span className="text-[#e8ff47]">[INF]</span> Agent initiated action: <code>execute_command</code></p>
+                      <p><span className="text-[#00f0ff]">[CHK]</span> Analyzing semantic intent...</p>
+                      <p><span className="text-[#00f0ff]">[CHK]</span> Confidence: 0.92, Blast Radius: HIGH</p>
+                      <p><span className="text-[#ff6b6b]">[BLK]</span> Action blocked by rule: SYS_MODIFY</p>
+                      <p><span className="text-[#00f0ff]">[RPT]</span> Fallback triggered. Returning mock result.</p>
+                    </div>
+                 </div>
+               </div>
+            </div>
+          </div>
+        </div>
+
       <div
         ref={scrollRef}
         className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-1 text-[#888]"
