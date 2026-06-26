@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 
 interface Contributor {
@@ -23,9 +25,9 @@ export default function Contributors() {
       <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-500">
         Built by the community.
       </h2>
-      <p className="text-[#888] font-mono text-xs uppercase tracking-[0.2em] mb-16">Join us on GitHub</p>
+      <p className="text-[#888] font-mono text-xs uppercase tracking-[0.2em] mb-12">Join us on GitHub</p>
 
-      <div className="flex flex-wrap justify-center gap-4">
+      <div className="flex flex-wrap justify-center gap-4 mb-16">
         {contributors.map((c) => (
           <a
             key={c.login}
@@ -43,6 +45,16 @@ export default function Contributors() {
             </div>
           </a>
         ))}
+      </div>
+      
+      <div className="flex justify-center mt-8">
+        <a
+          href="/contributors"
+          className="btn-magnetic px-8 py-3 rounded-full bg-[#111] border border-[#e8ff47]/30 text-[#e8ff47] font-semibold text-sm hover:bg-[#e8ff47]/10 transition-colors uppercase tracking-widest inline-block"
+          style={{ fontFamily: "var(--font-jetbrains)" }}
+        >
+          View Hall of Fame
+        </a>
       </div>
     </section>
   );

@@ -10,52 +10,157 @@ gsap.registerPlugin(ScrollTrigger);
 // Mocked data for contributors based on user request.
 const CONTRIBUTORS = [
   {
-    username: "sreerevanth",
-    avatarUrl: "https://github.com/sreerevanth.png",
+    username: "SHAURYASANYAL3",
+    avatarUrl: "https://avatars.githubusercontent.com/u/128920982?v=4",
     role: "Creator & Maintainer",
     stats: {
-      commits: 154,
-      prs: 23,
-      issues: 45,
+      commits: 12,
+      prs: 16,
+      issues: 27
     },
-    specialContribution: "Architected the core reasoning auditor, causal memory graph, and live dashboard.",
+    specialContribution: "Architected AgentWatch and built the core foundation.",
     highlights: [
-      "Implemented git-backed rollback for agent state",
-      "Built the independent reasoning auditor model",
-      "Designed the pre-execution safety engine"
+      "PR #480: Feature/new landing UI",
+      "PR #455: test(cli): Add tests and benchmarks",
+      "PR #454: feat(cli): Add core CLI logic"
     ]
   },
   {
-    username: "johndoe",
-    avatarUrl: "https://github.com/github.png",
+    username: "sreerevanth",
+    avatarUrl: "https://avatars.githubusercontent.com/u/86904394?v=4",
     role: "Core Contributor",
     stats: {
-      commits: 42,
-      prs: 15,
-      issues: 12,
+      commits: 39,
+      prs: 2,
+      issues: 1
     },
-    specialContribution: "Led the implementation of the MCP server integration and LangGraph adapter.",
+    specialContribution: "Actively contributed to AgentWatch with 39 commits and 2 PRs.",
     highlights: [
-      "Added support for LangGraph framework (PR #12)",
-      "Fixed critical memory leak in event loop (Issue #34)",
-      "Built the MCP server schema validation"
+      "PR #410: Create SECURITY.md",
+      "PR #409: Create CODE_OF_CONDUCT.md"
     ]
   },
   {
-    username: "janedoe",
-    avatarUrl: "https://github.com/octocat.png",
+    username: "Prateeks16",
+    avatarUrl: "https://avatars.githubusercontent.com/u/153312544?v=4",
     role: "Contributor",
     stats: {
-      commits: 18,
-      prs: 5,
-      issues: 8,
+      commits: 11,
+      prs: 11,
+      issues: 0
     },
-    specialContribution: "Revamped the testing suite and added 100+ unit tests for safety rules.",
+    specialContribution: "Actively contributed to AgentWatch with 11 commits and 11 PRs.",
     highlights: [
-      "Integrated pytest-asyncio for concurrent tests (PR #28)",
-      "Identified and fixed prompt injection bypass (Issue #41)",
-      "Added CI/CD workflows for automated publishing"
+      "PR #450: feat(governance): tamper-evident audit log for RBAC",
+      "PR #449: fix(cli): route all session subcommands through one Typer group",
+      "PR #445: fix: break governance↔tracing circular import"
     ]
+  },
+  {
+    username: "pavsoss",
+    avatarUrl: "https://avatars.githubusercontent.com/u/230380953?v=4",
+    role: "Contributor",
+    stats: {
+      commits: 12,
+      prs: 3,
+      issues: 2
+    },
+    specialContribution: "Actively contributed to AgentWatch with 12 commits and 3 PRs.",
+    highlights: [
+      "PR #458: feat(telemetry): enterprise OTLP reasoning trace export",
+      "PR #407: feat(mcp): expose AgentWatch observability tools through MCP",
+      "PR #404: feat(loop-detector): make loop threshold configurable"
+    ]
+  },
+  {
+    username: "anshul23102",
+    avatarUrl: "https://avatars.githubusercontent.com/u/167362756?v=4",
+    role: "Contributor",
+    stats: {
+      commits: 17,
+      prs: 0,
+      issues: 0
+    },
+    specialContribution: "Actively contributed to AgentWatch with 17 commits and 0 PRs.",
+    highlights: [
+      "Consistently improved codebase quality and reliability."
+    ]
+  },
+  {
+    username: "DebasmitaBose0",
+    avatarUrl: "https://avatars.githubusercontent.com/u/144198639?v=4",
+    role: "Contributor",
+    stats: {
+      commits: 15,
+      prs: 0,
+      issues: 2
+    },
+    highlights: [
+      "Issue #382: Implement Semantic Cache for Repeated LLM Subtasks",
+      "Issue #381: Implement HIPAA Compliance Mode with PHI Auto-Redaction"
+    ],
+    specialContribution: "Actively contributed to AgentWatch with 15 commits and 2 issues."
+  },
+  {
+    username: "SakethSumanBathini",
+    avatarUrl: "https://avatars.githubusercontent.com/u/178634012?v=4",
+    role: "Contributor",
+    stats: {
+      commits: 7,
+      prs: 4,
+      issues: 0
+    },
+    highlights: [
+      "PR #387: feat(api): wire CMP-005 SAML/RBAC enforcement into the API layer",
+      "PR #386: feat(memory): add MEM-008 natural language causal-graph traversal",
+      "PR #384: fix(security): resolve all 13 bandit warnings"
+    ],
+    specialContribution: "Actively contributed to AgentWatch with 7 commits and 4 PRs."
+  },
+  {
+    username: "arcgod-design",
+    avatarUrl: "https://avatars.githubusercontent.com/u/225413120?v=4",
+    role: "Contributor",
+    stats: {
+      commits: 1,
+      prs: 6,
+      issues: 0
+    },
+    highlights: [
+      "PR #460: feat: multi-tenant cloud architecture for AgentWatch Cloud",
+      "PR #439: feat: allow custom session metadata enrichment in watch() API",
+      "PR #438: feat: support exporting compliance audit logs as CSV"
+    ],
+    specialContribution: "Actively contributed to AgentWatch with 1 commits and 6 PRs."
+  },
+  {
+    username: "prachishelke1312",
+    avatarUrl: "https://avatars.githubusercontent.com/u/228935308?v=4",
+    role: "Contributor",
+    stats: {
+      commits: 5,
+      prs: 2,
+      issues: 0
+    },
+    highlights: [
+      "PR #408: refactor: reduce verbose Claude Code debug logging",
+      "PR #392: refactor: reduce verbose Claude Code debug logging"
+    ],
+    specialContribution: "Actively contributed to AgentWatch with 5 commits and 2 PRs."
+  },
+  {
+    username: "SHUBHAM2775",
+    avatarUrl: "https://avatars.githubusercontent.com/u/161486999?v=4",
+    role: "Contributor",
+    stats: {
+      commits: 7,
+      prs: 0,
+      issues: 0
+    },
+    highlights: [
+      "Consistently improved codebase quality and reliability."
+    ],
+    specialContribution: "Actively contributed to AgentWatch with 7 commits and 0 PRs."
   }
 ];
 
