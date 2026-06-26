@@ -8,7 +8,7 @@ const LINKS = [
   { label: "Features",     href: "#features",     section: "features" },
   { label: "How it works", href: "#how-it-works", section: "how-it-works" },
   { label: "About",        href: "/about",        page: true },
-  { label: "Contributors", href: "#contributors", section: "contributors" },
+  { label: "Contributors", href: "/contributors", page: true },
   { label: "GitHub",       href: "https://github.com/sreerevanth/agentwatch", external: true },
   { label: "Discord",      href: "https://discord.gg/ZbQ9m9HtnE", external: true },
 ];

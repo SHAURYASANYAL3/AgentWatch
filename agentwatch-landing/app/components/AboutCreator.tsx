@@ -20,38 +20,18 @@ export default function AboutCreator() {
               I'm a developer focused on AI systems, developer tools, open-source software, and building technology that solves real-world problems.
             </p>
             <p>
-              My journey into software development started with curiosity and quickly evolved into a passion for creating tools, exploring emerging technologies, and contributing to projects that make an impact. Over time, I've worked across AI, automation, backend systems, developer tooling, and full-stack development, constantly learning by building.
-            </p>
-            <p>
-              I'm the creator of AgentWatch, an open-source observability and reasoning-auditing platform designed to help developers monitor, understand, and improve AI agent behavior. Through AgentWatch, I explore challenges around AI reliability, transparency, and agentic systems while contributing to the growing ecosystem of AI development tools.
-            </p>
-            <p>
-              I'm also the founder of VoidSwift, a community-driven open-source ecosystem built around a simple belief: meaningful contributions matter more than contribution counts. VoidSwift brings together builders, maintainers, students, and developers who want to learn through real-world projects, collaboration, and long-term open-source involvement.
-            </p>
-            <div>
-              <p className="mb-2 text-white">My interests include:</p>
-              <ul className="list-disc list-inside space-y-1 ml-2 text-[#00f0ff]">
-                <li><span className="text-[#888]">Artificial Intelligence & Machine Learning</span></li>
-                <li><span className="text-[#888]">AI Agents & Agentic Systems</span></li>
-                <li><span className="text-[#888]">Open Source Software</span></li>
-                <li><span className="text-[#888]">Developer Tools & Infrastructure</span></li>
-                <li><span className="text-[#888]">Backend Engineering</span></li>
-                <li><span className="text-[#888]">Automation & Workflow Systems</span></li>
-                <li><span className="text-[#888]">Full-Stack Development</span></li>
-                <li><span className="text-[#888]">AI Observability & Monitoring</span></li>
-              </ul>
-            </div>
-            <p>
-              I strongly believe that the best way to grow as an engineer is to build in public, contribute to real projects, and stay curious. Whether it's reviewing code, maintaining software, solving technical challenges, or helping contributors navigate open source, I enjoy being part of communities that create meaningful technology together.
-            </p>
-            <p>
-              Currently focused on building impactful software, growing open-source communities, and pushing the boundaries of what developers can achieve with AI.
+              I'm the creator of AgentWatch and founder of VoidSwift, exploring challenges around AI reliability, transparency, and agentic systems. I strongly believe that the best way to grow as an engineer is to build in public and contribute to real projects.
             </p>
             <p className="font-mono text-xs uppercase tracking-widest text-white mt-8">
               Founder @VoidSwift • Creator of AgentWatch • Open Source Maintainer
               <br/><br/>
               <span className="text-[#e8ff47]">Ideas welcome. PRs preferred.</span>
             </p>
+            <div className="pt-4">
+              <a href="/about" className="inline-flex items-center gap-2 text-[#00f0ff] hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">
+                Read full bio →
+              </a>
+            </div>
           </div>
           <a href="#" className="inline-flex items-center gap-2 text-[#00f0ff] hover:text-white transition-colors font-mono text-sm uppercase tracking-widest">
             Follow on X
