@@ -126,7 +126,9 @@ def _start_repl_session():
                 break
 
             if cmd_lower in ("clear", "cls"):
-                os.system("cls" if os.name == "nt" else "clear")  # nosec # noqa: S605, S607
+                os.system(  # noqa: S605, S607
+                    "cls" if os.name == "nt" else "clear"
+                )  # nosec
                 continue
 
             args = shlex.split(cmd_line)
@@ -983,7 +985,9 @@ def status(
         def generate_dashboard(data, error_msg=None):
             if error_msg:
                 return Panel(
-                    f"[red]{error_msg}[/red]", title="AgentWatch Error", border_style="red"
+                    f"[red]{error_msg}[/red]",
+                    title="AgentWatch Error",
+                    border_style="red",
                 )
 
             # Create sub-panels
@@ -1004,7 +1008,9 @@ def status(
             resources.add_row("Total Tokens:", f"[bold]{tokens:,}[/bold]")
             resources.add_row("Est. Cost:", f"[green]${cost:.4f}[/green]")
             p2 = Panel(
-                resources, title="[magenta]Resource Utilization[/magenta]", border_style="magenta"
+                resources,
+                title="[magenta]Resource Utilization[/magenta]",
+                border_style="magenta",
             )
 
             safety_stats = data.get("safety_stats", {})
@@ -1015,7 +1021,9 @@ def status(
             pipeline.add_row("Event T-Put:", f"{eb_stats.get('total_published', 0):,} processed")
             pipeline.add_row("Subscribers:", f"{eb_stats.get('active_subscribers', 0)}")
             p3 = Panel(
-                pipeline, title="[yellow]Safety & Event Pipeline[/yellow]", border_style="yellow"
+                pipeline,
+                title="[yellow]Safety & Event Pipeline[/yellow]",
+                border_style="yellow",
             )
 
             layout = Layout()
@@ -1036,7 +1044,9 @@ def status(
 
         async with httpx.AsyncClient() as client:
             with Live(
-                generate_dashboard({}), refresh_per_second=1 / refresh_rate, console=console
+                generate_dashboard({}),
+                refresh_per_second=1 / refresh_rate,
+                console=console,
             ) as live:
                 while True:
                     try:
@@ -1233,11 +1243,15 @@ def compare(
         table.add_column("Session B", justify="center", width=12)
 
         table.add_row(
-            "Overall Confidence", format_score(m1["overall"]), format_score(m2["overall"])
+            "Overall Confidence",
+            format_score(m1["overall"]),
+            format_score(m2["overall"]),
         )
         table.add_row("Hallucination Risk", m1["hrisk"], m2["hrisk"])
         table.add_row(
-            "Goal Alignment", format_score(m1["alignment"]), format_score(m2["alignment"])
+            "Goal Alignment",
+            format_score(m1["alignment"]),
+            format_score(m2["alignment"]),
         )
         table.add_row("Failed Steps", str(m1["failed"]), str(m2["failed"]))
         table.add_row("Safety Blocks", str(m1["blocks"]), str(m2["blocks"]))
@@ -1810,7 +1824,8 @@ def session_prune(
         table.add_row("Database Sessions", str(data.get("pruned_db_sessions", 0)))
         table.add_row("Trace Files (.json)", str(data.get("pruned_trace_files", 0)))
         table.add_row(
-            "Checkpoints (Snapshots + Metadata)", str(data.get("pruned_checkpoint_files", 0))
+            "Checkpoints (Snapshots + Metadata)",
+            str(data.get("pruned_checkpoint_files", 0)),
         )
 
         console.print(table)
