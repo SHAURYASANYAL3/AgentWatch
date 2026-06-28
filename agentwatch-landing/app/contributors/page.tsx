@@ -172,218 +172,206 @@ export default function ContributorsPage() {
     if (prefersReduced) return;
 
     const ctx = gsap.context(() => {
-      // Epic Hero Entrance
-      gsap.fromTo(".hero-content > *", 
-        { y: 60, opacity: 0, scale: 0.9, rotationX: -30 },
-        { y: 0, opacity: 1, scale: 1, rotationX: 0, duration: 1.5, stagger: 0.2, ease: "expo.out", transformOrigin: "center bottom" }
+      // Glitch Intro
+      gsap.fromTo(".glitch-text", 
+        { opacity: 0, scale: 1.1, filter: "blur(10px)" },
+        { opacity: 1, scale: 1, filter: "blur(0px)", duration: 1.5, ease: "expo.out" }
       );
 
-      // Background Aura Pulse
-      gsap.to(".bg-aura", {
-        scale: 1.2,
-        opacity: 0.15,
-        duration: 4,
-        repeat: -1,
-        yoyo: true,
-        ease: "sine.inOut"
-      });
+      // Top 3 Entrance
+      gsap.fromTo(".elite-card", 
+        { y: 100, opacity: 0, rotationX: 20 },
+        { y: 0, opacity: 1, rotationX: 0, duration: 1.5, stagger: 0.2, ease: "power4.out" }
+      );
 
-      // Cards Entrance and continuous float
-      const cards = gsap.utils.toArray(".contributor-card");
-      cards.forEach((card: any, i) => {
-        gsap.fromTo(card, 
-          { y: 100, opacity: 0, scale: 0.8, rotationY: 15 },
-          { 
-            y: 0, opacity: 1, scale: 1, rotationY: 0, 
-            duration: 1.2, delay: i * 0.15, ease: "power4.out",
-            scrollTrigger: {
-              trigger: card,
-              start: "top 85%",
-            }
-          }
-        );
-
-        // Continuous floating
-        gsap.to(card, {
-          y: "-=10",
-          duration: 2 + Math.random(),
-          repeat: -1,
-          yoyo: true,
-          ease: "sine.inOut",
-          delay: Math.random() * 2
-        });
-      });
+      // List Entrance
+      gsap.fromTo(".list-row",
+        { x: -50, opacity: 0 },
+        { x: 0, opacity: 1, duration: 0.8, stagger: 0.05, ease: "power2.out", scrollTrigger: { trigger: ".list-container", start: "top 80%" } }
+      );
     }, pageRef);
 
-    // 3D Tilt and Spotlight Effect
-    const onPointerMove = (e: PointerEvent) => {
-      pageRef.current?.querySelectorAll<HTMLElement>(".contributor-card").forEach((card) => {
-        const rect = card.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        
-        // Spotlight
-        card.style.setProperty("--mx", `${x}px`);
-        card.style.setProperty("--my", `${y}px`);
-
-        // 3D Tilt (only if hovering over this specific card)
-        if (x > 0 && x < rect.width && y > 0 && y < rect.height) {
-          const rotateX = ((y / rect.height) - 0.5) * -15;
-          const rotateY = ((x / rect.width) - 0.5) * 15;
-          gsap.to(card, { rotationX: rotateX, rotationY: rotateY, duration: 0.5, ease: "power2.out", transformPerspective: 1000 });
-        } else {
-          gsap.to(card, { rotationX: 0, rotationY: 0, duration: 0.5, ease: "power2.out" });
-        }
-      });
-    };
-
-    pageRef.current?.addEventListener("pointermove", onPointerMove, { passive: true });
-
-    return () => {
-      ctx.revert();
-      pageRef.current?.removeEventListener("pointermove", onPointerMove);
-    };
+    return () => ctx.revert();
   }, []);
 
-  return (
-    <main ref={pageRef} className="relative min-h-screen pt-32 pb-24 px-6 overflow-hidden perspective-1000 bg-[#050505] text-[#ededed] selection:bg-[#00f0ff]/30 selection:text-[#00f0ff]">
-      {/* Background Grid & Vignette */}
-      <div className="absolute inset-0 z-0 pointer-events-none" style={{
-        backgroundImage: "linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)",
-        backgroundSize: "64px 64px",
-        backgroundPosition: "center center",
-        maskImage: "radial-gradient(circle at center, black 20%, transparent 80%)",
-        WebkitMaskImage: "radial-gradient(circle at center, black 20%, transparent 80%)"
-      }} />
-      <div className="bg-aura absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-[#00f0ff] rounded-full blur-[150px] opacity-[0.07] pointer-events-none z-0" />
-      <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] pointer-events-none mix-blend-overlay z-0" />
+  const top3 = CONTRIBUTORS.slice(0, 3);
+  const rest = CONTRIBUTORS.slice(3);
 
-      <div className="max-w-[1000px] mx-auto relative z-10">
-        <section className="mb-20 text-center hero-content" style={{ perspective: 1000 }}>
+  return (
+    <main ref={pageRef} className="relative min-h-screen pt-32 pb-32 px-4 sm:px-6 overflow-hidden bg-[#050505] text-[#ededed] selection:bg-[#e8ff47]/30 selection:text-[#e8ff47]">
+      {/* Background */}
+      <div className="absolute inset-0 z-0 pointer-events-none" style={{
+        backgroundImage: "linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px)",
+        backgroundSize: "40px 40px",
+        backgroundPosition: "center center",
+      }} />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[600px] bg-[#00f0ff] rounded-full blur-[200px] opacity-[0.05] pointer-events-none z-0" />
+      <div className="absolute bottom-0 right-0 w-[800px] h-[800px] bg-[#e8ff47] rounded-full blur-[200px] opacity-[0.03] pointer-events-none z-0" />
+      <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.04] pointer-events-none mix-blend-overlay z-0" />
+
+      <div className="max-w-[1200px] mx-auto relative z-10">
+        <header className="mb-24 text-center">
+          <div className="inline-block px-4 py-1.5 rounded-full border border-[#00f0ff]/30 bg-[#00f0ff]/10 text-[#00f0ff] text-xs font-mono font-bold uppercase tracking-[0.3em] mb-6 shadow-[0_0_20px_rgba(0,240,255,0.2)]">
+            SYSTEM_OPERATORS
+          </div>
           <h1
-            className="font-bold leading-[1.08] mb-5"
+            className="glitch-text font-black uppercase leading-[0.9] tracking-tighter"
             style={{
               fontFamily: "var(--font-syne)",
-              fontSize: "clamp(2rem, 5.2vw, 4rem)",
-              background: "linear-gradient(135deg, #ffffff 0%, #e8ff47 100%)",
+              fontSize: "clamp(3rem, 8vw, 7rem)",
+              background: "linear-gradient(180deg, #ffffff 0%, #a8a8a8 100%)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-              textWrap: "balance",
-              filter: "drop-shadow(0 0 30px rgba(232, 255, 71, 0.4))"
+              filter: "drop-shadow(0 10px 20px rgba(0,0,0,0.5))"
             }}
           >
-            Hall of Fame
+            Hall of <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#e8ff47] to-[#00f0ff]">Fame</span>
           </h1>
-          <p
-            className="text-[#b8b8b8] max-w-xl mx-auto font-light"
-            style={{ fontSize: "clamp(1rem, 2vw, 1.125rem)" }}
-          >
-            AgentWatch is built by an incredible open-source community. Here are the people making it happen.
-          </p>
-        </section>
+        </header>
 
-        <div className="contributors-grid grid grid-cols-1 md:grid-cols-2 gap-8" style={{ perspective: 1000 }}>
-          {CONTRIBUTORS.map((c, i) => (
-            <div
-              key={c.username}
-              className="contributor-card dark-glass rounded-2xl p-6 sm:p-8 flex flex-col h-full border border-white/5 relative group cursor-crosshair transform-style-3d"
-              style={{
-                background: "linear-gradient(145deg, rgba(10,10,10,0.9) 0%, rgba(5,5,5,0.95) 100%)",
-                boxShadow: "0 0 0 1px rgba(255,255,255,0.05), 0 20px 40px rgba(0,0,0,0.5)"
-              }}
-            >
-              {/* Animated Border Gradient on Hover */}
-              <div className="absolute -inset-[2px] rounded-2xl bg-gradient-to-r from-[#00f0ff] via-[#e8ff47] to-[#00f0ff] opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm pointer-events-none" style={{ zIndex: -1, backgroundSize: "200% 200%", animation: "gradientMove 3s linear infinite" }} />
-              
-              {/* Spotlight Follower */}
-              <div 
-                className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-0" 
-                style={{
-                  background: `radial-gradient(600px circle at var(--mx) var(--my), rgba(232, 255, 71, 0.08), transparent 40%)`
-                }}
-              />
+        {/* TOP 3 ELITES */}
+        <div className="mb-32">
+          <h2 className="text-2xl font-bold font-mono text-white mb-10 border-b border-white/10 pb-4 flex items-center gap-4">
+            <span className="w-3 h-3 bg-[#e8ff47] shadow-[0_0_10px_#e8ff47]" /> 
+            ELITE VANGUARD // RANK 01 - 03
+          </h2>
 
-              <div className="flex items-center gap-4 mb-6 relative z-10 translate-z-10">
-                <div className="relative w-16 h-16 rounded-full p-[2px] bg-gradient-to-br from-[#00f0ff] to-[#e8ff47] group-hover:shadow-[0_0_20px_#00f0ff] transition-shadow duration-500">
-                  <img
-                    src={c.avatarUrl}
-                    alt={c.username}
-                    className="w-full h-full rounded-full object-cover border-2 border-[#050505]"
-                  />
-                </div>
-                <div>
-                  <h3
-                    className="font-bold text-xl text-white mb-1 group-hover:text-[#e8ff47] transition-colors"
-                    style={{ fontFamily: "var(--font-syne)", textShadow: "0 2px 10px rgba(0,0,0,0.5)" }}
-                  >
-                    @{c.username}
-                  </h3>
-                  <div
-                    className="text-xs uppercase tracking-widest text-[#00f0ff]"
-                    style={{ fontFamily: "var(--font-jetbrains)" }}
-                  >
-                    {c.role}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {top3.map((c, i) => (
+              <div
+                key={c.username}
+                className={`elite-card group relative p-1 rounded-2xl bg-gradient-to-b from-white/10 to-transparent overflow-hidden ${i === 0 ? "lg:col-span-2" : ""}`}
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-[#00f0ff]/20 via-transparent to-[#e8ff47]/20 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                
+                <div className={`relative h-full bg-[#0a0a0a] rounded-xl border border-black p-6 sm:p-10 flex flex-col ${i === 0 ? "lg:flex-row items-center gap-10" : "gap-6"}`}>
+                  
+                  {/* Rank Badge */}
+                  <div className="absolute top-0 right-0 px-6 py-2 bg-[#e8ff47] text-black font-black font-mono text-xl sm:text-3xl rounded-bl-3xl shadow-[0_0_30px_#e8ff47]">
+                    #{i + 1}
+                  </div>
+
+                  {/* Avatar Area */}
+                  <div className="relative shrink-0">
+                    <div className={`relative ${i === 0 ? "w-32 h-32 sm:w-48 sm:h-48" : "w-24 h-24 sm:w-32 sm:h-32"} rounded-full border-4 border-[#050505] z-10 overflow-hidden`}>
+                      <img src={c.avatarUrl} alt={c.username} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                    </div>
+                    {/* Ring glow */}
+                    <div className="absolute inset-[-10px] rounded-full border border-[#00f0ff]/50 animate-[spin_10s_linear_infinite]" border-style="dashed" />
+                    <div className="absolute inset-[-20px] rounded-full border border-[#e8ff47]/30 animate-[spin_15s_linear_infinite_reverse]" border-style="dotted" />
+                  </div>
+
+                  {/* Content Area */}
+                  <div className="flex-1 flex flex-col justify-center">
+                    <div className="mb-6">
+                      <h3 className="font-bold text-3xl sm:text-5xl text-white mb-2" style={{ fontFamily: "var(--font-syne)" }}>
+                        {c.username}
+                      </h3>
+                      <div className="text-[#00f0ff] font-mono tracking-widest text-sm uppercase">
+                        &gt; {c.role}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4 mb-8">
+                      <div className="bg-[#050505] border border-white/5 p-4 rounded-lg">
+                        <div className="text-3xl font-black text-white">{c.stats.commits}</div>
+                        <div className="text-[10px] uppercase tracking-widest text-[#888]">Commits</div>
+                      </div>
+                      <div className="bg-[#050505] border border-white/5 p-4 rounded-lg">
+                        <div className="text-3xl font-black text-white">{c.stats.prs}</div>
+                        <div className="text-[10px] uppercase tracking-widest text-[#888]">PRs</div>
+                      </div>
+                      <div className="bg-[#050505] border border-white/5 p-4 rounded-lg">
+                        <div className="text-3xl font-black text-white">{c.stats.issues}</div>
+                        <div className="text-[10px] uppercase tracking-widest text-[#888]">Issues</div>
+                      </div>
+                    </div>
+
+                    <div className="text-[#a8a8a8] font-mono text-sm leading-relaxed mb-6 border-l-2 border-[#e8ff47] pl-4">
+                      {c.specialContribution}
+                    </div>
+
+                    <a
+                      href={`https://github.com/${c.username}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 text-[#00f0ff] hover:text-[#e8ff47] font-bold uppercase tracking-widest text-xs transition-colors"
+                    >
+                      <span>Access File</span>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                      </svg>
+                    </a>
                   </div>
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
 
-              <div className="grid grid-cols-3 gap-3 mb-6 relative z-10 translate-z-10">
-                <div className="bg-[#050505]/80 rounded-xl p-3 text-center border border-white/5 group-hover:border-[#e8ff47]/30 transition-colors">
-                  <div className="text-2xl font-bold text-white mb-1">{c.stats.commits}</div>
-                  <div className="text-[9px] uppercase text-[#888] tracking-widest">Commits</div>
-                </div>
-                <div className="bg-[#050505]/80 rounded-xl p-3 text-center border border-white/5 group-hover:border-[#00f0ff]/30 transition-colors">
-                  <div className="text-2xl font-bold text-white mb-1">{c.stats.prs}</div>
-                  <div className="text-[9px] uppercase text-[#888] tracking-widest">PRs</div>
-                </div>
-                <div className="bg-[#050505]/80 rounded-xl p-3 text-center border border-white/5 group-hover:border-white/20 transition-colors">
-                  <div className="text-2xl font-bold text-white mb-1">{c.stats.issues}</div>
-                  <div className="text-[9px] uppercase text-[#888] tracking-widest">Issues</div>
-                </div>
-              </div>
+        {/* THE CORE OPERATORS - TERMINAL LIST */}
+        <div className="list-container relative">
+          <h2 className="text-2xl font-bold font-mono text-white mb-10 border-b border-white/10 pb-4 flex items-center gap-4">
+            <span className="w-3 h-3 bg-[#00f0ff] shadow-[0_0_10px_#00f0ff]" /> 
+            CORE OPERATORS // INITIATIVES
+          </h2>
 
-              <div className="flex-1 relative z-10 translate-z-10">
-                <p className="text-sm text-[#e5e2e1] mb-5 leading-relaxed bg-black/20 p-4 rounded-lg border border-white/5 group-hover:bg-[#e8ff47]/5 transition-colors">
-                  <span className="font-bold text-[#e8ff47] block mb-1">Impact //</span>
-                  {c.specialContribution}
-                </p>
+          <div className="flex flex-col gap-3">
+            {/* Table Header */}
+            <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3 text-xs font-mono font-bold text-[#555] uppercase tracking-widest border-b border-white/5">
+              <div className="col-span-1">Rank</div>
+              <div className="col-span-4">Operator</div>
+              <div className="col-span-2 text-center">Commits</div>
+              <div className="col-span-2 text-center">PRs</div>
+              <div className="col-span-2 text-center">Issues</div>
+              <div className="col-span-1 text-right">Link</div>
+            </div>
 
-                <div className="space-y-3 mt-4">
-                  <p className="text-[10px] font-bold text-[#888] uppercase tracking-[0.2em] mb-3">Notable Merges</p>
-                  {c.highlights.map((h, index) => (
-                    <div key={index} className="flex items-start gap-3 text-sm text-[#a8a8a8] group-hover:text-[#c0c0c0] transition-colors">
-                      <svg className="w-4 h-4 text-[#00f0ff] flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
-                      <span className="leading-snug">{h}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
+            {rest.map((c, i) => (
               <a
+                key={c.username}
                 href={`https://github.com/${c.username}`}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-6 w-full text-center py-3 rounded-lg bg-[#050505] border border-white/10 hover:border-[#e8ff47] hover:bg-[#e8ff47]/10 hover:text-[#e8ff47] transition-all text-xs font-bold uppercase tracking-widest relative z-10 translate-z-10 shadow-lg"
-                style={{ fontFamily: "var(--font-jetbrains)" }}
+                className="list-row group grid grid-cols-1 md:grid-cols-12 gap-4 items-center p-4 sm:px-6 sm:py-4 bg-[#0a0a0a] border border-white/5 hover:border-[#00f0ff]/50 rounded-xl hover:bg-[#00f0ff]/5 transition-all duration-300"
               >
-                View Profile
+                <div className="col-span-1 font-mono text-[#888] font-bold text-lg hidden md:block">
+                  {(i + 4).toString().padStart(2, '0')}
+                </div>
+                
+                <div className="col-span-1 md:col-span-4 flex items-center gap-4">
+                  <img src={c.avatarUrl} alt={c.username} className="w-12 h-12 rounded-full border border-white/10 group-hover:border-[#00f0ff] transition-colors" />
+                  <div>
+                    <div className="font-bold text-white text-lg group-hover:text-[#00f0ff] transition-colors">{c.username}</div>
+                    <div className="text-xs text-[#888] font-mono uppercase truncate">{c.role}</div>
+                  </div>
+                </div>
+
+                <div className="col-span-1 md:col-span-2 flex justify-between md:block md:text-center">
+                  <span className="md:hidden text-xs text-[#555] font-mono uppercase">Commits</span>
+                  <span className="font-mono font-bold text-white">{c.stats.commits}</span>
+                </div>
+                
+                <div className="col-span-1 md:col-span-2 flex justify-between md:block md:text-center">
+                  <span className="md:hidden text-xs text-[#555] font-mono uppercase">PRs</span>
+                  <span className="font-mono font-bold text-white">{c.stats.prs}</span>
+                </div>
+                
+                <div className="col-span-1 md:col-span-2 flex justify-between md:block md:text-center">
+                  <span className="md:hidden text-xs text-[#555] font-mono uppercase">Issues</span>
+                  <span className="font-mono font-bold text-white">{c.stats.issues}</span>
+                </div>
+
+                <div className="col-span-1 hidden md:flex justify-end text-[#555] group-hover:text-[#e8ff47] transition-colors">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="square" strokeLinejoin="miter" strokeWidth={1.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </div>
               </a>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
-      <style dangerouslySetInnerHTML={{__html: `
-        .transform-style-3d { transform-style: preserve-3d; }
-        .translate-z-10 { transform: translateZ(20px); }
-        @keyframes gradientMove {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-      `}} />
     </main>
   );
 }
