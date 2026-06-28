@@ -31,7 +31,8 @@ export default function Hero() {
 
   useEffect(() => {
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (prefersReduced) return;
+    const isMobile = window.innerWidth < 768;
+    if (prefersReduced || isMobile) return; // Skip heavy JS intro on mobile for instant LCP
 
     const tl = gsap.timeline({ delay: 0.4 });
     const targets = [

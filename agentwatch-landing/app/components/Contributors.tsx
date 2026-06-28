@@ -16,7 +16,9 @@ export default function Contributors() {
     fetch("https://api.github.com/repos/sreerevanth/agentwatch/contributors")
       .then((res) => res.json())
       .then((data) => {
-        if (Array.isArray(data)) setContributors(data);
+        if (Array.isArray(data)) {
+          setContributors(data.filter((c: any) => c.login !== "sreerevanth"));
+        }
       })
       .catch((err) => console.error("Error fetching contributors:", err));
   }, []);

@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
 
 const ThreeBackground = dynamic(() => import("./ThreeBackground"), {
   ssr: false,
@@ -18,11 +19,19 @@ import EdgeTraces from "./EdgeTraces";
  */
 export default function Atmosphere() {
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // Defer loading heavy Three.js assets until main thread is idle
+    const timer = setTimeout(() => setMounted(true), 500);
+    return () => clearTimeout(timer);
+  }, []);
+
   const hidden = pathname?.startsWith("/about");
   if (hidden) return null;
   return (
     <>
-      <ThreeBackground />
+      {mounted && <ThreeBackground />}
       <EdgeTraces />
     </>
   );

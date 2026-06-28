@@ -81,10 +81,7 @@ async function getContributors() {
       let role = c.prs >= 5 ? "Core Contributor" : "Contributor";
       let specialContribution = `Actively contributed with ${c.prs} merged PR${c.prs !== 1 ? 's' : ''}.`;
       
-      if (c.username === "sreerevanth") {
-        role = "Creator of AgentWatch";
-        specialContribution = "Creator and lead maintainer of the AgentWatch core engine.";
-      } else if (c.username === "SHAURYASANYAL3") {
+      if (c.username === "SHAURYASANYAL3") {
         role = c.prs >= 5 ? "Core Contributor - Frontend Creator" : "Contributor - Frontend Creator";
         specialContribution = `Architected the frontend. Contributed ${c.prs} merged PR${c.prs !== 1 ? 's' : ''} to the repository.`;
       }
@@ -103,8 +100,8 @@ async function getContributors() {
 
     // Filter out users with 0 PRs from the top section to keep the leaderboard clean, 
     // unless it's the frontend creator or backend creator to ensure they appear somewhere.
-    finalContributors = finalContributors.filter(c => 
-      c.stats.prs > 0 || c.username === "SHAURYASANYAL3" || c.username === "sreerevanth"
+    finalContributors = finalContributors.filter((c: any) => 
+      c.username !== "sreerevanth" && (c.stats.prs > 0 || c.username === "SHAURYASANYAL3")
     );
 
     return finalContributors;
@@ -112,13 +109,6 @@ async function getContributors() {
     console.error("Error fetching contributors:", error);
     // Fallback data
     return [
-      {
-        username: "sreerevanth",
-        avatarUrl: "https://avatars.githubusercontent.com/u/86904394?v=4",
-        role: "Creator of AgentWatch",
-        stats: { prs: 10, commits: 39 },
-        specialContribution: "Creator and lead maintainer of the AgentWatch core engine."
-      },
       {
         username: "SHAURYASANYAL3",
         avatarUrl: "https://avatars.githubusercontent.com/u/128920982?v=4",

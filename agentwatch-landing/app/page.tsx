@@ -14,6 +14,8 @@ export default function Home() {
   const containerRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
+    if (window.innerWidth < 768) return; // Skip heavy JS intro on mobile for instant LCP
+
     const ctx = gsap.context(() => {
       // Entrance animations
       gsap.from(".stagger-in", {
