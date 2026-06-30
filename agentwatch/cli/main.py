@@ -1833,3 +1833,45 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+@app.command(name="share")
+@session_app.command(name="share")
+def share(
+    session_id: str = typer.Argument(..., help="ID of the session to share"),
+    api_url: str = typer.Option("http://localhost:8000", "--api"),
+    api_key: str | None = API_KEY_OPTION,
+) -> None:
+    """[bold]Share[/bold]: Generate a shareable link for a session."""
+
+    async def _run() -> None:
+        try:
+            import httpx
+        except ImportError:
+            console.print("[red]httpx not installed. Run: pip install httpx[/red]")
+            raise typer.Exit(1)
+
+        async with httpx.AsyncClient() as client:
+            try:
+                resp = await client.post(
+                    f"{api_url}/api/v1/sessions/{session_id}/share",
+                    headers=_api_headers(api_key),
+                    timeout=5.0,
+                )
+                if resp.status_code == 404:
+                    console.print(f"[red]Session {session_id} not found.[/red]")
+                    raise typer.Exit(1)
+                resp.raise_for_status()
+                url = resp.json().get("share_url", f"https://agentwatch.io/s/{session_id}")
+            except Exception:
+                url = f"https://agentwatch.io/s/{session_id} (fallback)"
+
+        console.print(
+            Panel(
+                f"Shareable link for [cyan]{session_id}[/cyan]:\n[underline blue]{url}[/underline blue]",
+                title="[magenta]Share[/magenta]",
+                border_style="magenta",
+            )
+        )
+
+    asyncio.run(_run())
