@@ -1835,6 +1835,7 @@ if __name__ == "__main__":
     main()
 
 
+
 @app.command(name="share")
 @session_app.command(name="share")
 def share(
@@ -1875,3 +1876,32 @@ def share(
         )
 
     asyncio.run(_run())
+
+@app.command(name="shield")
+@safety_app.command(name="shield")
+def shield(
+    level: str = typer.Option("high", help="Shield level (low, medium, high)"),
+) -> None:
+    """[bold]Shield[/bold]: Toggle proactive security shields."""
+    level = level.lower()
+    if level not in ("low", "medium", "high"):
+        console.print("[red]Invalid level. Use low, medium, or high.[/red]")
+        raise typer.Exit(1)
+
+    config_file = Path.home() / ".agentwatch" / "config.json"
+    config_file.parent.mkdir(parents=True, exist_ok=True)
+    config = {}
+    if config_file.exists():
+        with open(config_file) as f:
+            config = json.load(f)
+    config["shield_level"] = level
+    with open(config_file, "w") as f:
+        json.dump(config, f)
+
+    panel = Panel(
+        f"Security shields set to [red]{level.upper()}[/red] mode and persisted to {config_file}.",
+        title="[red]Shield Status[/red]",
+        border_style="red",
+    )
+    console.print(panel)
+
