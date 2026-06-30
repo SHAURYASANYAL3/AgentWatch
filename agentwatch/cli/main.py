@@ -1833,3 +1833,18 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+@app.command(name="cost-predict")
+def cost_predict(
+    task: str = typer.Argument(..., help="Task description"),
+) -> None:
+    """[bold]Predict Cost[/bold]: Estimate LLM costs for a task."""
+    tokens_est = len(task.split()) * 50
+    cost_est = (tokens_est / 1000) * 0.015
+    panel = Panel(
+        f"Task: {task}\nTokens: ~{tokens_est}\nEstimated Cost: [green]${cost_est:.4f}[/green]",
+        title="[green]Cost Prediction[/green]",
+        border_style="green",
+    )
+    console.print(panel)
